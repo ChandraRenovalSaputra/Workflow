@@ -31,20 +31,26 @@ class LihatJadwalFrame(Frame):
     def load_table(self, keyword=None):
         rows = search_jadwal(keyword) if keyword else get_jadwal_pekerjaan()
 
-        # 🧹 Hapus semua widget lama sebelum load baru
+        # Hapus semua widget lama sebelum load baru
         for widget in self.table_frame.winfo_children():
             widget.destroy()
 
-        headers = ["Nama Pekerjaan", "ID", "PO", "Tahap", "Mulai", "Selesai", "Deadline"]
+        headers = ["Nama Pekerjaan", "ID", "PO", "Tahap", "Mulai", "Selesai", "Deadline", "Aksi"]
         for col, text in enumerate(headers):
-            Label(self.table_frame, text=text, font=('Arial', 10, 'bold'), bd=1, relief=RIDGE, width=15).grid(row=0, column=col)
+            Label(self.table_frame, text=text, font=('Arial', 10, 'bold'), 
+                bd=1, relief=RIDGE, width=15, bg='#f0f0f0').grid(row=0, column=col, sticky='nsew')
 
         for i, row in enumerate(rows, start=1):
             for j, val in enumerate(row):
-                Label(self.table_frame, text=val, bd=1, relief=RIDGE, width=15).grid(row=i, column=j)
+                Label(self.table_frame, text=val, bd=1, relief=RIDGE, 
+                    width=15, anchor='w').grid(row=i, column=j, sticky='nsew')
 
-            Button(self.table_frame, text="Detail", bg="red", fg="white", 
-                command=lambda sid=row[1]: self.lihat_detail(sid)).grid(row=i, column=len(row))
+            Button(self.table_frame, text="Detail", bg="#4CAF50", fg="white", 
+                command=lambda sid=row[1]: self.lihat_detail(sid)).grid(row=i, column=len(headers)-1, sticky='nsew')
+
+        # Atur ukuran kolom agar seragam
+        for col in range(len(headers)):
+            self.table_frame.grid_columnconfigure(col, weight=1)
 
     def lihat_detail(self, spk_id):
         """ Cek apakah fungsi ini berjalan """

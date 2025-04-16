@@ -1,4 +1,3 @@
-# ui_dashboard.py
 import tkinter as tk
 from ui_input_spk import SPKInputFrame
 from lihat_jadwal_frame import LihatJadwalFrame

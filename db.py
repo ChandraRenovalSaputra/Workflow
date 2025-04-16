@@ -56,17 +56,40 @@ def get_jadwal_pekerjaan():
     cursor = conn.cursor()
 
     query = """
+    WITH current_stages AS (
+        SELECT 
+            t.spk_id,
+            t.nama_tahapan,
+            t.mulai,
+            t.selesai,
+            s.tanggal_kirim,
+            s.nama_artikel,
+            s.no_po,
+            s.id,
+            -- Menentukan tahap yang sedang berjalan (current stage)
+            ROW_NUMBER() OVER (
+                PARTITION BY t.spk_id 
+                ORDER BY 
+                    CASE 
+                        WHEN date(t.mulai) <= date('now') AND date(t.selesai) >= date('now') THEN 0  -- Tahap sedang berjalan
+                        WHEN date(t.mulai) > date('now') THEN 1  -- Tahap belum dimulai
+                        ELSE 2  -- Tahap sudah selesai
+                    END,
+                    date(t.mulai) ASC
+            ) as priority
+        FROM spk_tahapan t
+        JOIN spk s ON t.spk_id = s.id
+    )
     SELECT 
-        s.nama_artikel AS Nama_Pekerjaan,
-        s.id AS ID,  
-        s.no_po AS PO,
-        t.nama_tahapan AS Tahap,
-        t.mulai AS Mulai,
-        t.selesai AS Selesai,
-        s.tanggal_kirim AS Deadline
-    FROM spk s
-    LEFT JOIN spk_tahapan t ON s.id = t.spk_id
-    WHERE t.selesai IS NOT NULL;
+        nama_artikel AS Nama_Pekerjaan,
+        id AS ID,  
+        no_po AS PO,
+        nama_tahapan AS Tahap,
+        mulai AS Mulai,
+        selesai AS Selesai,
+        tanggal_kirim AS Deadline
+    FROM current_stages
+    WHERE priority = 1;  -- Hanya ambil yang prioritas tertinggi (current stage)
     """
 
     cursor.execute(query)
@@ -78,20 +101,43 @@ def search_jadwal(keyword):
     conn = get_workflow_conn()
     cursor = conn.cursor()
     query = """
+    WITH current_stages AS (
+        SELECT 
+            t.spk_id,
+            t.nama_tahapan,
+            t.mulai,
+            t.selesai,
+            s.tanggal_kirim,
+            s.nama_artikel,
+            s.no_po,
+            s.id,
+            ROW_NUMBER() OVER (
+                PARTITION BY t.spk_id 
+                ORDER BY 
+                    CASE 
+                        WHEN date(t.mulai) <= date('now') AND date(t.selesai) >= date('now') THEN 0
+                        WHEN date(t.mulai) > date('now') THEN 1
+                        ELSE 2
+                    END,
+                    date(t.mulai) ASC
+            ) as priority
+        FROM spk_tahapan t
+        JOIN spk s ON t.spk_id = s.id
+        WHERE 
+            s.nama_artikel LIKE ? OR 
+            s.id LIKE ? OR 
+            s.no_po LIKE ?
+    )
     SELECT 
-        s.nama_artikel AS Nama_Pekerjaan,
-        s.id AS ID,  
-        s.no_po AS PO,
-        t.nama_tahapan AS Tahap,
-        t.mulai AS Mulai,
-        t.selesai AS Selesai,
-        s.tanggal_kirim AS Deadline
-    FROM spk s
-    LEFT JOIN spk_tahapan t ON s.id = t.spk_id
-    WHERE 
-        s.nama_artikel LIKE ? OR 
-        s.id LIKE ? OR 
-        s.no_po LIKE ?;
+        nama_artikel AS Nama_Pekerjaan,
+        id AS ID,  
+        no_po AS PO,
+        nama_tahapan AS Tahap,
+        mulai AS Mulai,
+        selesai AS Selesai,
+        tanggal_kirim AS Deadline
+    FROM current_stages
+    WHERE priority = 1;
     """
     cursor.execute(query, (f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
     rows = cursor.fetchall()
@@ -105,7 +151,12 @@ def get_spk_details(spk_id):
     cursor.execute("SELECT * FROM spk WHERE id = ?", (spk_id,))
     spk_data = cursor.fetchone()
 
-    cursor.execute("SELECT nama_tahapan, mulai, selesai FROM spk_tahapan WHERE spk_id = ?", (spk_id,))
+    cursor.execute('''
+        SELECT nama_tahapan, mulai, selesai, keterangan 
+        FROM spk_tahapan 
+        WHERE spk_id = ?
+        ORDER BY date(mulai) ASC
+    ''', (spk_id,))
     tahapan_data = cursor.fetchall()
 
     conn.close()
@@ -151,3 +202,20 @@ def create_spk_tables():
     """)
     conn.commit()
     conn.close()
+
+def update_keterangan_tahapan(spk_id, tahap, keterangan):
+    conn = get_workflow_conn()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            UPDATE spk_tahapan 
+            SET keterangan = ?
+            WHERE spk_id = ? AND nama_tahapan = ?
+        ''', (keterangan, spk_id, tahap))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error updating keterangan: {e}")
+        return False
+    finally:
+        conn.close()

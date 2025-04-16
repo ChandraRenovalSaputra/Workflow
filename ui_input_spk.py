@@ -11,17 +11,20 @@ import shutil
 import time
 from PIL import Image, ImageTk
 import traceback
-
+import io
+import traceback
+from datetime import datetime
+import qrcode
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.entries = {}
-        self.desain_temp_path = None  # Tambahkan baris ini
-        self.dummy_temp_path = None   # Tambahkan baris ini
-        self.gambar_desain = None  # <= tambahkan ini
-        self.gambar_dummy = None   # <= dan ini
+        self.desain_temp_path = None  
+        self.dummy_temp_path = None   
+        self.gambar_desain = None  
+        self.gambar_dummy = None  
 
         scroll = ScrollableFrame(self)
         scroll.pack(fill="both", expand=True)
@@ -112,6 +115,7 @@ class SPKInputFrame(tk.Frame):
         # Jika batal, tidak terjadi apa-apa
 
     def save_spk(self):
+        # Validasi input
         for field, entry in self.entries.items():
             if field != "DUMMY" and entry.get().strip() == "":
                 messagebox.showwarning("Input Kosong", f"Kolom '{field}' wajib diisi.")
@@ -162,9 +166,7 @@ class SPKInputFrame(tk.Frame):
             conn = get_workflow_conn()
             c = conn.cursor()
 
-            print("gambar_desain_path =", gambar_desain_path)
-            print("gambar_dummy_path =", gambar_dummy_path)
-
+            # Insert data SPK tanpa barcode dulu
             c.execute('''
                 INSERT INTO spk (
                     order_sales, no_po, costumer, nama_artikel, qty, tanggal_kirim,
@@ -192,6 +194,31 @@ class SPKInputFrame(tk.Frame):
             ))
             spk_id = c.lastrowid
 
+            # Generate dan simpan barcode
+            barcode_data = f"SPK-{spk_id}"
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(barcode_data)
+            qr.make(fit=True)
+            barcode_img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Convert image to BLOB
+            img_byte_arr = io.BytesIO()  # Perbaikan: gunakan BytesIO dengan huruf besar
+            barcode_img.save(img_byte_arr, format='PNG')
+            barcode_blob = img_byte_arr.getvalue()
+            
+            # Update SPK dengan data barcode
+            c.execute('''
+                UPDATE spk 
+                SET barcode_data = ?, barcode_image = ?
+                WHERE id = ?
+            ''', (barcode_data, barcode_blob, spk_id))
+
+            # Simpan tahapan produksi
             for row_id, (tahap, mulai, selesai) in self.estimasi_rows.items():
                 c.execute('''
                     INSERT INTO spk_tahapan (spk_id, nama_tahapan, mulai, selesai)
@@ -207,6 +234,19 @@ class SPKInputFrame(tk.Frame):
             tb = traceback.format_exc()
             messagebox.showerror("Gagal Simpan", f"Gagal menyimpan data SPK:\n{e}\n\n{tb}")
 
+    def generate_barcode_image(self, data):
+        """Generate QR Code image"""
+        import qrcode
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+        return qr.make_image(fill_color="black", back_color="white")
+    
     def go_dashboard(self):
         self.master.switch_frame(__import__('ui_dashboard').DashboardFrame)
 
@@ -292,9 +332,9 @@ class SPKInputFrame(tk.Frame):
     def upload_desain(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg *.bmp")])
         if file_path:
-            self.desain_temp_path = file_path  # Simpan path asli sementara
+            self.desain_temp_path = file_path  
             image = Image.open(file_path)
-            image = image.resize((100, 100))  # Ukuran thumbnail
+            image = image.resize((100, 100))  
             photo = ImageTk.PhotoImage(image)
 
             if hasattr(self, 'desain_label'):
@@ -303,14 +343,14 @@ class SPKInputFrame(tk.Frame):
             else:
                 self.desain_label = tk.Label(self, image=photo)
                 self.desain_label.image = photo
-                self.desain_label.grid(row=15, column=2)  # Atur posisi sesuai layout kamu
+                self.desain_label.grid(row=15, column=2)  
 
     def upload_dummy(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg *.bmp")])
         if file_path:
-            self.dummy_temp_path = file_path  # Simpan path sementara
+            self.dummy_temp_path = file_path  
             image = Image.open(file_path)
-            image = image.resize((100, 100))  # Atur ukuran thumbnail
+            image = image.resize((100, 100))  
             photo = ImageTk.PhotoImage(image)
 
             if hasattr(self, 'dummy_label'):
@@ -319,5 +359,5 @@ class SPKInputFrame(tk.Frame):
             else:
                 self.dummy_label = tk.Label(self, image=photo)
                 self.dummy_label.image = photo
-                self.dummy_label.grid(row=16, column=2)  # Atur posisi sesuai UI kamu
+                self.dummy_label.grid(row=16, column=2) 
 

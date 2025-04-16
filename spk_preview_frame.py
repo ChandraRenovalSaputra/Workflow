@@ -35,22 +35,22 @@ class SPKPreviewFrame(tk.Frame):
         tk.Label(self, text="SURAT PERINTAH KERJA", font=("Helvetica", 18, "bold")).pack(pady=10)
 
         info_text = f"""
-        ORDER SALES : {self.data['order_sales']}
-        NO PO       : {self.data['no_po']}
-        COSTUMER    : {self.data['costumer']}
-        NAMA ARTIKEL: {self.data['nama_artikel']}
-        QTY         : {self.data['qty']}
-        TANGGAL KIRIM: {self.data['tanggal_kirim']}
+        ORDER SALES : {self.data.get('order_sales', '')}
+        NO PO       : {self.data.get('no_po', '')}
+        COSTUMER    : {self.data.get('costumer', '')}
+        NAMA ARTIKEL: {self.data.get('nama_artikel', '')}
+        QTY         : {self.data.get('qty', '')}
+        TANGGAL KIRIM: {self.data.get('tanggal_kirim', '')}
 
-        JENIS BAHAN : {self.data['jenis_bahan']}
-        QTY BAHAN   : {self.data['qty_bahan']}
-        UKURAN CETAK: {self.data['ukuran_cetak']}
-        JUMLAH CETAK: {self.data['jumlah_cetak']}
-        INSHEET     : {self.data['insheet']}
-        TOTAL CETAK : {self.data['total_cetak']}
-        WARNA       : {self.data['warna']}
-        VARNISH     : {self.data['varnish']}
-        FINISHING   : {self.data['finishing']}
+        JENIS BAHAN : {self.data.get('jenis_bahan', '')}
+        QTY BAHAN   : {self.data.get('qty_bahan', '')}
+        UKURAN CETAK: {self.data.get('ukuran_cetak', '')}
+        JUMLAH CETAK: {self.data.get('jumlah_cetak', '')}
+        INSHEET     : {self.data.get('insheet', '')}
+        TOTAL CETAK : {self.data.get('total_cetak', '')}
+        WARNA       : {self.data.get('warna', '')}
+        VARNISH     : {self.data.get('varnish', '')}
+        FINISHING   : {self.data.get('finishing', '')}
         """.strip()
 
         tk.Label(self, text=info_text, justify="left", anchor="w").pack(padx=20, pady=10)
@@ -59,18 +59,17 @@ class SPKPreviewFrame(tk.Frame):
         img_frame = tk.Frame(self)
         img_frame.pack(pady=10)
 
-        self.show_image(img_frame, self.data['desain_path'], "Desain")
+        # Gunakan nama kolom yang sesuai dengan database
+        self.show_image(img_frame, self.data.get('gambar_desain'), "Desain")
         self.generate_and_show_barcode(img_frame)
-        self.show_image(img_frame, self.data['dummy_path'], "Dummy")
+        self.show_image(img_frame, self.data.get('gambar_dummy'), "Dummy")
 
         # Tombol
         btn_frame = tk.Frame(self)
         btn_frame.pack(pady=15)
 
         tk.Button(btn_frame, text="Cetak SPK", command=self.export_to_pdf).pack(side="left", padx=10)
-        # tk.Button(btn_frame, text="Dashboard", command=self.go_dashboard, width=15).pack(side="left", padx=10)
         tk.Button(btn_frame, text="Kembali ke Dashboard", command=lambda: self.controller.switch_frame(DashboardFrame)).pack(side="left", padx=10)
-
 
     def show_image(self, parent, path, label):
         if path and os.path.exists(path):
@@ -115,12 +114,15 @@ class SPKPreviewFrame(tk.Frame):
         y -= 30
         try:
             from reportlab.lib.utils import ImageReader
-            if os.path.exists(self.data['desain_path']):
-                c.drawImage(self.data['desain_path'], 50, y - 100, width=100, height=100)
+            desain_path = self.data.get('gambar_desain')
+            dummy_path = self.data.get('gambar_dummy')
+            
+            if desain_path and os.path.exists(desain_path):
+                c.drawImage(desain_path, 50, y - 100, width=100, height=100)
             if os.path.exists(self.barcode_path):
                 c.drawImage(self.barcode_path, 170, y - 100, width=100, height=100)
-            if os.path.exists(self.data['dummy_path']):
-                c.drawImage(self.data['dummy_path'], 290, y - 100, width=100, height=100)
+            if dummy_path and os.path.exists(dummy_path):
+                c.drawImage(dummy_path, 290, y - 100, width=100, height=100)
         except Exception as e:
                 print(f"Gagal menampilkan gambar di PDF: {e}")
 
@@ -130,8 +132,6 @@ class SPKPreviewFrame(tk.Frame):
         self.print_pdf(filename)
         
         tk.messagebox.showinfo("Sukses", f"File PDF berhasil dibuat: {filename}")
-        
-
     def print_pdf(self, filepath):
         try:
             if platform.system() == "Windows":
@@ -162,17 +162,3 @@ class SPKPreviewFrame(tk.Frame):
             f"VARNISH     : {self.data['varnish']}",
             f"FINISHING   : {self.data['finishing']}",
         ]
-# class App(tk.Tk):
-#     def __init__(self):
-#         super().__init__()
-#         self.switch_frame(DashboardFrame)
-
-#     def switch_frame(self, frame_class, *args):
-#         new_frame = frame_class(self, self, *args)
-#         if hasattr(self, 'current_frame'):
-#             self.current_frame.destroy()
-#         self.current_frame = new_frame
-#         self.current_frame.pack(fill="both", expand=True)
-
-#     def show_dashboard(self):
-#         self.switch_frame(DashboardFrame)

@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from ui_login import LoginFrame
-from db import create_tables, create_spk_tables  # Pastikan tabel dibuat
+from db import create_tables, create_spk_tables  
 create_tables()
 create_spk_tables()
 
