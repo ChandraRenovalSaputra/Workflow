@@ -270,14 +270,14 @@ class SPKInputFrame(tk.Frame):
         self.selected_tahapan.grid(row=0, column=1, padx=5)
 
         tk.Label(tambah_frame, text="Mulai (tgl & jam):").grid(row=0, column=2)
-        self.mulai_tanggal = DateEntry(tambah_frame, width=10)
+        self.mulai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID")
         self.mulai_tanggal.grid(row=0, column=3)
         self.mulai_jam = tk.Entry(tambah_frame, width=5)
         self.mulai_jam.insert(0, "08:00")
         self.mulai_jam.grid(row=0, column=4, padx=(0, 5))
 
         tk.Label(tambah_frame, text="Selesai (tgl & jam):").grid(row=0, column=5)
-        self.selesai_tanggal = DateEntry(tambah_frame, width=10)
+        self.selesai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID")
         self.selesai_tanggal.grid(row=0, column=6)
         self.selesai_jam = tk.Entry(tambah_frame, width=5)
         self.selesai_jam.insert(0, "17:00")
@@ -302,8 +302,8 @@ class SPKInputFrame(tk.Frame):
 
     def tambah_tahapan(self):
         tahap = self.selected_tahapan.get()
-        mulai = f"{self.mulai_tanggal.get()} {self.mulai_jam.get()}"
-        selesai = f"{self.selesai_tanggal.get()} {self.selesai_jam.get()}"
+        mulai = f"{self.mulai_tanggal.get_date().strftime('%Y-%m-%d')} {self.mulai_jam.get()}"
+        selesai = f"{self.selesai_tanggal.get_date().strftime('%Y-%m-%d')} {self.selesai_jam.get()}"
 
         if not tahap:
             messagebox.showwarning("Input Kosong", "Pilih tahapan terlebih dahulu.")
