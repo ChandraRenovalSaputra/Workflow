@@ -1,30 +1,28 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from scrollable_frame import ScrollableFrame
-from tkcalendar import DateEntry
 from datetime import datetime
 from tkinter import filedialog
-from db import get_workflow_conn
 import os
 import shutil
 import time
-from PIL import Image, ImageTk
-import traceback
 import io
 import traceback
-from datetime import datetime
+from PIL import Image, ImageTk
+from tkcalendar import DateEntry
 import qrcode
+from scrollable_frame import ScrollableFrame
+from db import get_workflow_conn
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.entries = {}
-        self.desain_temp_path = None  
-        self.dummy_temp_path = None   
-        self.gambar_desain = None  
-        self.gambar_dummy = None  
+        self.desain_temp_path = None
+        self.dummy_temp_path = None
+        self.gambar_desain = None
+        self.gambar_dummy = None
 
         scroll = ScrollableFrame(self)
         scroll.pack(fill="both", expand=True)
@@ -61,12 +59,14 @@ class SPKInputFrame(tk.Frame):
         tk.Label(self.container, text="Upload Gambar Desain:").pack(anchor="w", padx=20)
         self.desain_label = tk.Label(self.container, text="Belum ada file", fg="gray")
         self.desain_label.pack(anchor="w", padx=20)
-        tk.Button(self.container, text="Pilih File", command=self.upload_desain).pack(pady=(0,10), anchor="w", padx=20)
+        tk.Button(self.container, text="Pilih File", command=self.upload_desain).pack(pady=(0,10), padx=20, anchor="w")
+        tk.Button(self.container, text="Hapus File", command=self.remove_desain).pack(pady=(0,10), padx=20, anchor="w")
 
         tk.Label(self.container, text="Upload Gambar Dummy:").pack(anchor="w", padx=20)
         self.dummy_label = tk.Label(self.container, text="Belum ada file", fg="gray")
         self.dummy_label.pack(anchor="w", padx=20)
         tk.Button(self.container, text="Pilih File", command=self.upload_dummy).pack(pady=(0,10), anchor="w", padx=20)
+        tk.Button(self.container, text="Hapus File", command=self.remove_dummy  ).pack(pady=(0,10), anchor="w", padx=20)
 
         # ===== Estimasi Tahapan =====
         self.build_estimasi_section()
@@ -205,12 +205,12 @@ class SPKInputFrame(tk.Frame):
             qr.add_data(barcode_data)
             qr.make(fit=True)
             barcode_img = qr.make_image(fill_color="black", back_color="white")
-            
+
             # Convert image to BLOB
             img_byte_arr = io.BytesIO()  # Perbaikan: gunakan BytesIO dengan huruf besar
             barcode_img.save(img_byte_arr, format='PNG')
             barcode_blob = img_byte_arr.getvalue()
-            
+
             # Update SPK dengan data barcode
             c.execute('''
                 UPDATE spk 
@@ -332,9 +332,9 @@ class SPKInputFrame(tk.Frame):
     def upload_desain(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg *.bmp")])
         if file_path:
-            self.desain_temp_path = file_path  
+            self.desain_temp_path = file_path
             image = Image.open(file_path)
-            image = image.resize((100, 100))  
+            image = image.resize((100, 100))
             photo = ImageTk.PhotoImage(image)
 
             if hasattr(self, 'desain_label'):
@@ -343,14 +343,19 @@ class SPKInputFrame(tk.Frame):
             else:
                 self.desain_label = tk.Label(self, image=photo)
                 self.desain_label.image = photo
-                self.desain_label.grid(row=15, column=2)  
+                self.desain_label.grid(row=15, column=2)
+
+    def remove_desain(self):
+        if self.desain_label:
+            self.desain_label.configure(image="")
+            self.desain_temp_path = None
 
     def upload_dummy(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg *.bmp")])
         if file_path:
-            self.dummy_temp_path = file_path  
+            self.dummy_temp_path = file_path
             image = Image.open(file_path)
-            image = image.resize((100, 100))  
+            image = image.resize((100, 100))
             photo = ImageTk.PhotoImage(image)
 
             if hasattr(self, 'dummy_label'):
@@ -359,5 +364,8 @@ class SPKInputFrame(tk.Frame):
             else:
                 self.dummy_label = tk.Label(self, image=photo)
                 self.dummy_label.image = photo
-                self.dummy_label.grid(row=16, column=2) 
-
+                self.dummy_label.grid(row=16, column=2)
+    def remove_dummy(self):
+        if self.dummy_label:
+            self.dummy_label.configure(image="")
+            self.dummy_temp_path = None
