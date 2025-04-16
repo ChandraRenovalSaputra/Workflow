@@ -9,25 +9,94 @@ from ui_register import RegisterFrame
 
 class LoginFrame(tk.Frame):
     def __init__(self, parent, controller):
-        super().__init__(parent)
+        super().__init__(parent, bg="#f0f2f5")
         self.controller = controller
-        tk.Label(self, text="Login", font=("Arial", 18)).pack(pady=10)
 
-        self.username_entry = self.create_labeled_entry("Username")
-        self.password_entry = self.create_labeled_entry("Password", show="*")
+        # Container besar
+        container = tk.Frame(
+            self,
+            bg="white",
+            bd=0,
+            highlightthickness=2,
+            highlightbackground="#ccc",
+            padx=60,
+            pady=50
+        )
+        container.place(relx=0.5, rely=0.5, anchor="center")
 
-        tk.Button(self, text="Login", command=self.login).pack(pady=10)
-        tk.Button(self, text="Belum punya akun? Register", command=lambda: self.controller.switch_frame(__import__("ui_register").RegisterFrame)).pack(pady=5)
+        # Judul
+        tk.Label(
+            container,
+            text="Selamat Datang",
+            font=("Segoe UI", 30, "bold"),
+            bg="white",
+            fg="#333"
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 10))
 
+        tk.Label(
+            container,
+            text="Silakan login untuk melanjutkan",
+            font=("Segoe UI", 14),
+            bg="white",
+            fg="#666"
+        ).grid(row=1, column=0, columnspan=2, pady=(0, 30))
 
-    def create_labeled_entry(self, label, show=None):
-        tk.Label(self, text=label).pack()
-        entry = tk.Entry(self, show=show)
-        entry.pack()
+        # Input field
+        self.username_entry = self.create_labeled_entry(container, "Username", 2)
+        self.password_entry = self.create_labeled_entry(container, "Password", 4, show="*")
+
+        # Tombol Login
+        login_btn = tk.Button(
+            container,
+            text="Masuk",
+            command=self.login,
+            bg="#0078D7",
+            fg="white",
+            font=("Segoe UI", 14, "bold"),
+            relief="flat",
+            padx=12,
+            pady=10,
+            width=30,
+            cursor="hand2",
+            activebackground="#005a9e"
+        )
+        login_btn.grid(row=6, column=0, columnspan=2, pady=(30, 15))
+
+        # Tombol Register
+        register_btn = tk.Button(
+            container,
+            text="Belum punya akun? Daftar di sini",
+            command=lambda: self.controller.switch_frame(RegisterFrame),
+            bg="white",
+            fg="#0078D7",
+            relief="flat",
+            font=("Segoe UI", 12, "underline"),
+            cursor="hand2",
+            activeforeground="#005a9e"
+        )
+        register_btn.grid(row=7, column=0, columnspan=2)
+
+    def create_labeled_entry(self, parent, label, row, show=None):
+        tk.Label(
+            parent,
+            text=label,
+            font=("Segoe UI", 13),
+            bg="white",
+            anchor="w"
+        ).grid(row=row, column=0, sticky="w", columnspan=2, pady=(0, 8))
+
+        entry = tk.Entry(
+            parent,
+            show=show,
+            font=("Segoe UI", 13),
+            width=35,
+            relief="solid",
+            bd=1
+        )
+        entry.grid(row=row + 1, column=0, columnspan=2, pady=(0, 20))
         return entry
 
     def login(self):
-        print("Tombol login ditekan")  # debug
         username = self.username_entry.get()
         password = self.password_entry.get()
         user = check_login(username, password)
