@@ -153,9 +153,6 @@ class SPKInputFrame(tk.Frame):
                 filename = f"dummy_{int(time.time())}{ext}"
                 gambar_dummy_path = os.path.join(images_dir, filename)
                 shutil.copy(self.dummy_temp_path, gambar_dummy_path)
-            else:
-                messagebox.showwarning("Upload Gambar", "Silakan unggah gambar dummy terlebih dahulu.")
-                return
 
         except Exception as e:
             messagebox.showerror("Gagal Salin Gambar", f"Gagal menyalin file gambar: {e}")
