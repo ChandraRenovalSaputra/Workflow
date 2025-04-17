@@ -7,12 +7,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import os
 from tkinter import messagebox
-# from reportlab.lib.utils import ImageReader
-import platform
-import subprocess
 from ui_dashboard import DashboardFrame
-
-
 
 class SPKPreviewFrame(tk.Frame):
     def __init__(self, parent, controller, spk_id):
@@ -59,17 +54,15 @@ class SPKPreviewFrame(tk.Frame):
         img_frame = tk.Frame(self)
         img_frame.pack(pady=10)
 
-        # Gunakan nama kolom yang sesuai dengan database
         self.show_image(img_frame, self.data.get('gambar_desain'), "Desain")
         self.generate_and_show_barcode(img_frame)
         self.show_image(img_frame, self.data.get('gambar_dummy'), "Dummy")
 
-        # Tombol
+        # Tombol hanya kembali ke dashboard
         btn_frame = tk.Frame(self)
         btn_frame.pack(pady=15)
-
-        tk.Button(btn_frame, text="Cetak SPK", command=self.export_to_pdf).pack(side="left", padx=10)
-        tk.Button(btn_frame, text="Kembali ke Dashboard", command=lambda: self.controller.switch_frame(DashboardFrame)).pack(side="left", padx=10)
+        tk.Button(btn_frame, text="Kembali ke Dashboard", 
+                 command=lambda: self.controller.switch_frame(DashboardFrame)).pack()
 
     def show_image(self, parent, path, label):
         if path and os.path.exists(path):
@@ -80,7 +73,7 @@ class SPKPreviewFrame(tk.Frame):
             frame.pack(side="left", padx=20)
             tk.Label(frame, image=photo).pack()
             tk.Label(frame, text=label).pack()
-            frame.image = photo  # prevent garbage collection
+            frame.image = photo
         else:
             frame = tk.Frame(parent)
             frame.pack(side="left", padx=20)
@@ -93,72 +86,3 @@ class SPKPreviewFrame(tk.Frame):
         qr.save(barcode_path)
         self.show_image(parent, barcode_path, "Barcode")
         self.barcode_path = barcode_path
-
-    def export_to_pdf(self):
-        os.makedirs("spk_output", exist_ok=True)
-        filename = os.path.join("spk_output", f"SPK_{self.spk_id}.pdf")
-        c = canvas.Canvas(filename, pagesize=A4)
-        width, height = A4
-
-        y = height - 50
-        c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(width / 2, y, "SURAT PERINTAH KERJA")
-
-        y -= 50
-        c.setFont("Helvetica", 10)
-        for line in self.data_text_lines():
-            c.drawString(50, y, line)
-            y -= 15
-
-        # Gambar: desain, barcode, dummy
-        y -= 30
-        try:
-            from reportlab.lib.utils import ImageReader
-            desain_path = self.data.get('gambar_desain')
-            dummy_path = self.data.get('gambar_dummy')
-            
-            if desain_path and os.path.exists(desain_path):
-                c.drawImage(desain_path, 50, y - 100, width=100, height=100)
-            if os.path.exists(self.barcode_path):
-                c.drawImage(self.barcode_path, 170, y - 100, width=100, height=100)
-            if dummy_path and os.path.exists(dummy_path):
-                c.drawImage(dummy_path, 290, y - 100, width=100, height=100)
-        except Exception as e:
-                print(f"Gagal menampilkan gambar di PDF: {e}")
-
-        c.save()
-        
-        # Cetak otomatis (opsional)
-        self.print_pdf(filename)
-        
-        tk.messagebox.showinfo("Sukses", f"File PDF berhasil dibuat: {filename}")
-    def print_pdf(self, filepath):
-        try:
-            if platform.system() == "Windows":
-                os.startfile(filepath, "print")
-            elif platform.system() == "Darwin":  # macOS
-                subprocess.run(["lp", filepath])
-            else:  # Linux
-                subprocess.run(["lp", filepath])
-        except Exception as e:
-            messagebox.showerror("Gagal Print", f"Terjadi kesalahan saat mencetak PDF:\n{e}")
-            
-    def data_text_lines(self):
-        return [
-            f"ORDER SALES : {self.data['order_sales']}",
-            f"NO PO       : {self.data['no_po']}",
-            f"COSTUMER    : {self.data['costumer']}",
-            f"NAMA ARTIKEL: {self.data['nama_artikel']}",
-            f"QTY         : {self.data['qty']}",
-            f"TANGGAL KIRIM: {self.data['tanggal_kirim']}",
-            "",
-            f"JENIS BAHAN : {self.data['jenis_bahan']}",
-            f"QTY BAHAN   : {self.data['qty_bahan']}",
-            f"UKURAN CETAK: {self.data['ukuran_cetak']}",
-            f"JUMLAH CETAK: {self.data['jumlah_cetak']}",
-            f"INSHEET     : {self.data['insheet']}",
-            f"TOTAL CETAK : {self.data['total_cetak']}",
-            f"WARNA       : {self.data['warna']}",
-            f"VARNISH     : {self.data['varnish']}",
-            f"FINISHING   : {self.data['finishing']}",
-        ]

@@ -1,8 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
 from datetime import datetime
-from tkinter import filedialog
 import os
 import shutil
 import time
@@ -13,6 +11,11 @@ from tkcalendar import DateEntry
 import qrcode
 from scrollable_frame import ScrollableFrame
 from db import get_workflow_conn
+import platform
+import subprocess
+from tkinter import messagebox, filedialog
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -204,7 +207,7 @@ class SPKInputFrame(tk.Frame):
             barcode_img = qr.make_image(fill_color="black", back_color="white")
 
             # Convert image to BLOB
-            img_byte_arr = io.BytesIO()  # Perbaikan: gunakan BytesIO dengan huruf besar
+            img_byte_arr = io.BytesIO()
             barcode_img.save(img_byte_arr, format='PNG')
             barcode_blob = img_byte_arr.getvalue()
 
@@ -223,6 +226,15 @@ class SPKInputFrame(tk.Frame):
                 ''', (spk_id, tahap, mulai, selesai))
 
             conn.commit()
+            
+            # Generate nama file PDF berdasarkan costumer dan nama artikel
+            costumer = data["COSTUMER"].replace(" ", "_")
+            artikel = data["NAMA ARTIKEL"].replace(" ", "_")
+            pdf_filename = f"{costumer}_{artikel}.pdf"
+            
+            # Buat PDF otomatis
+            self.generate_pdf(spk_id, gambar_desain_path, gambar_dummy_path, pdf_filename)
+            
             conn.close()
 
             self.controller.show_preview_frame(spk_id)
@@ -231,6 +243,102 @@ class SPKInputFrame(tk.Frame):
             tb = traceback.format_exc()
             messagebox.showerror("Gagal Simpan", f"Gagal menyimpan data SPK:\n{e}\n\n{tb}")
 
+    def generate_pdf(self, spk_id, desain_path, dummy_path, filename):
+        """Fungsi untuk membuat PDF SPK"""
+        os.makedirs("spk_output", exist_ok=True)
+        filepath = os.path.join("spk_output", filename)
+        
+        try:
+            # Ambil data dari database
+            conn = get_workflow_conn()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM spk WHERE id = ?", (spk_id,))
+            row = cursor.fetchone()
+            col_names = [d[0] for d in cursor.description]
+            data = dict(zip(col_names, row)) if row else {}
+            conn.close()
+
+            # Buat PDF
+            c = canvas.Canvas(filepath, pagesize=A4)
+            width, height = A4
+
+            # Header
+            y = height - 50
+            c.setFont("Helvetica-Bold", 16)
+            c.drawCentredString(width / 2, y, "SURAT PERINTAH KERJA")
+
+            # Informasi SPK
+            y -= 50
+            c.setFont("Helvetica", 10)
+            for line in [
+                f"ORDER SALES : {data.get('order_sales', '')}",
+                f"NO PO       : {data.get('no_po', '')}",
+                f"COSTUMER    : {data.get('costumer', '')}",
+                f"NAMA ARTIKEL: {data.get('nama_artikel', '')}",
+                f"QTY         : {data.get('qty', '')}",
+                f"TANGGAL KIRIM: {data.get('tanggal_kirim', '')}",
+                "",
+                f"JENIS BAHAN : {data.get('jenis_bahan', '')}",
+                f"QTY BAHAN   : {data.get('qty_bahan', '')}",
+                f"UKURAN CETAK: {data.get('ukuran_cetak', '')}",
+                f"JUMLAH CETAK: {data.get('jumlah_cetak', '')}",
+                f"INSHEET     : {data.get('insheet', '')}",
+                f"TOTAL CETAK : {data.get('total_cetak', '')}",
+                f"WARNA       : {data.get('warna', '')}",
+                f"VARNISH     : {data.get('varnish', '')}",
+                f"FINISHING   : {data.get('finishing', '')}",
+            ]:
+                c.drawString(50, y, line)
+                y -= 15
+
+            # Gambar: desain, barcode, dummy
+            y -= 30
+            try:
+                from reportlab.lib.utils import ImageReader
+                
+                # Generate barcode sementara
+                barcode_path = f"temp_barcode_{spk_id}.png"
+                qr = qrcode.make(f"SPK-{spk_id}")
+                qr.save(barcode_path)
+                
+                # Gambar desain
+                if desain_path and os.path.exists(desain_path):
+                    c.drawImage(desain_path, 50, y-100, width=100, height=100)
+                
+                # Gambar barcode
+                if os.path.exists(barcode_path):
+                    c.drawImage(barcode_path, 170, y-100, width=100, height=100)
+                    os.remove(barcode_path)  # Hapus file sementara
+                
+                # Gambar dummy
+                if dummy_path and os.path.exists(dummy_path):
+                    c.drawImage(dummy_path, 290, y-100, width=100, height=100)
+                    
+            except Exception as e:
+                print(f"Error adding images to PDF: {e}")
+
+            c.save()
+            
+            # Cetak otomatis (opsional)
+            self.print_pdf(filepath)
+            
+            messagebox.showinfo("Sukses", f"SPK berhasil disimpan dan PDF telah dibuat:\n{filepath}")
+            
+        except Exception as e:
+            messagebox.showerror("Gagal Buat PDF", f"Gagal membuat file PDF:\n{e}")
+
+    def print_pdf(self, filepath):
+        """Fungsi untuk mencetak PDF secara otomatis"""
+        try:
+            if platform.system() == "Windows":
+                os.startfile(filepath, "print")
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.run(["lp", filepath])
+            else:  # Linux
+                subprocess.run(["lp", filepath])
+        except Exception as e:
+            print(f"Gagal mencetak PDF: {e}")
+            
     def generate_barcode_image(self, data):
         """Generate QR Code image"""
         import qrcode
