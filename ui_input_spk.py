@@ -1,27 +1,31 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
-from scrollable_frame import ScrollableFrame
-from tkcalendar import DateEntry
 from datetime import datetime
-from tkinter import filedialog
-from db import get_workflow_conn
 import os
 import shutil
 import time
-from PIL import Image, ImageTk
+import io
 import traceback
-
+from PIL import Image, ImageTk
+from tkcalendar import DateEntry
+import qrcode
+from scrollable_frame import ScrollableFrame
+from db import get_workflow_conn
+import platform
+import subprocess
+from tkinter import messagebox, filedialog
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.entries = {}
-        self.desain_temp_path = None  # Tambahkan baris ini
-        self.dummy_temp_path = None   # Tambahkan baris ini
-        self.gambar_desain = None  # <= tambahkan ini
-        self.gambar_dummy = None   # <= dan ini
+        self.desain_temp_path = None
+        self.dummy_temp_path = None
+        self.gambar_desain = None
+        self.gambar_dummy = None
 
         scroll = ScrollableFrame(self)
         scroll.pack(fill="both", expand=True)
@@ -58,12 +62,14 @@ class SPKInputFrame(tk.Frame):
         tk.Label(self.container, text="Upload Gambar Desain:").pack(anchor="w", padx=20)
         self.desain_label = tk.Label(self.container, text="Belum ada file", fg="gray")
         self.desain_label.pack(anchor="w", padx=20)
-        tk.Button(self.container, text="Pilih File", command=self.upload_desain).pack(pady=(0,10), anchor="w", padx=20)
+        tk.Button(self.container, text="Pilih File", command=self.upload_desain).pack(pady=(0,10), padx=20, anchor="w")
+        tk.Button(self.container, text="Hapus File", command=self.remove_desain).pack(pady=(0,10), padx=20, anchor="w")
 
         tk.Label(self.container, text="Upload Gambar Dummy:").pack(anchor="w", padx=20)
         self.dummy_label = tk.Label(self.container, text="Belum ada file", fg="gray")
         self.dummy_label.pack(anchor="w", padx=20)
         tk.Button(self.container, text="Pilih File", command=self.upload_dummy).pack(pady=(0,10), anchor="w", padx=20)
+        tk.Button(self.container, text="Hapus File", command=self.remove_dummy  ).pack(pady=(0,10), anchor="w", padx=20)
 
         # ===== Estimasi Tahapan =====
         self.build_estimasi_section()
@@ -112,6 +118,7 @@ class SPKInputFrame(tk.Frame):
         # Jika batal, tidak terjadi apa-apa
 
     def save_spk(self):
+        # Validasi input
         for field, entry in self.entries.items():
             if field != "DUMMY" and entry.get().strip() == "":
                 messagebox.showwarning("Input Kosong", f"Kolom '{field}' wajib diisi.")
@@ -149,9 +156,6 @@ class SPKInputFrame(tk.Frame):
                 filename = f"dummy_{int(time.time())}{ext}"
                 gambar_dummy_path = os.path.join(images_dir, filename)
                 shutil.copy(self.dummy_temp_path, gambar_dummy_path)
-            else:
-                messagebox.showwarning("Upload Gambar", "Silakan unggah gambar dummy terlebih dahulu.")
-                return
 
         except Exception as e:
             messagebox.showerror("Gagal Salin Gambar", f"Gagal menyalin file gambar: {e}")
@@ -162,9 +166,7 @@ class SPKInputFrame(tk.Frame):
             conn = get_workflow_conn()
             c = conn.cursor()
 
-            print("gambar_desain_path =", gambar_desain_path)
-            print("gambar_dummy_path =", gambar_dummy_path)
-
+            # Insert data SPK tanpa barcode dulu
             c.execute('''
                 INSERT INTO spk (
                     order_sales, no_po, costumer, nama_artikel, qty, tanggal_kirim,
@@ -192,6 +194,31 @@ class SPKInputFrame(tk.Frame):
             ))
             spk_id = c.lastrowid
 
+            # Generate dan simpan barcode
+            barcode_data = f"SPK-{spk_id}"
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(barcode_data)
+            qr.make(fit=True)
+            barcode_img = qr.make_image(fill_color="black", back_color="white")
+
+            # Convert image to BLOB
+            img_byte_arr = io.BytesIO()
+            barcode_img.save(img_byte_arr, format='PNG')
+            barcode_blob = img_byte_arr.getvalue()
+
+            # Update SPK dengan data barcode
+            c.execute('''
+                UPDATE spk 
+                SET barcode_data = ?, barcode_image = ?
+                WHERE id = ?
+            ''', (barcode_data, barcode_blob, spk_id))
+
+            # Simpan tahapan produksi
             for row_id, (tahap, mulai, selesai) in self.estimasi_rows.items():
                 c.execute('''
                     INSERT INTO spk_tahapan (spk_id, nama_tahapan, mulai, selesai)
@@ -199,6 +226,15 @@ class SPKInputFrame(tk.Frame):
                 ''', (spk_id, tahap, mulai, selesai))
 
             conn.commit()
+            
+            # Generate nama file PDF berdasarkan costumer dan nama artikel
+            costumer = data["COSTUMER"].replace(" ", "_")
+            artikel = data["NAMA ARTIKEL"].replace(" ", "_")
+            pdf_filename = f"{costumer}_{artikel}.pdf"
+            
+            # Buat PDF otomatis
+            self.generate_pdf(spk_id, gambar_desain_path, gambar_dummy_path, pdf_filename)
+            
             conn.close()
 
             self.controller.show_preview_frame(spk_id)
@@ -207,6 +243,115 @@ class SPKInputFrame(tk.Frame):
             tb = traceback.format_exc()
             messagebox.showerror("Gagal Simpan", f"Gagal menyimpan data SPK:\n{e}\n\n{tb}")
 
+    def generate_pdf(self, spk_id, desain_path, dummy_path, filename):
+        """Fungsi untuk membuat PDF SPK"""
+        os.makedirs("spk_output", exist_ok=True)
+        filepath = os.path.join("spk_output", filename)
+        
+        try:
+            # Ambil data dari database
+            conn = get_workflow_conn()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM spk WHERE id = ?", (spk_id,))
+            row = cursor.fetchone()
+            col_names = [d[0] for d in cursor.description]
+            data = dict(zip(col_names, row)) if row else {}
+            conn.close()
+
+            # Buat PDF
+            c = canvas.Canvas(filepath, pagesize=A4)
+            width, height = A4
+
+            # Header
+            y = height - 50
+            c.setFont("Helvetica-Bold", 16)
+            c.drawCentredString(width / 2, y, "SURAT PERINTAH KERJA")
+
+            # Informasi SPK
+            y -= 50
+            c.setFont("Helvetica", 10)
+            for line in [
+                f"ORDER SALES : {data.get('order_sales', '')}",
+                f"NO PO       : {data.get('no_po', '')}",
+                f"COSTUMER    : {data.get('costumer', '')}",
+                f"NAMA ARTIKEL: {data.get('nama_artikel', '')}",
+                f"QTY         : {data.get('qty', '')}",
+                f"TANGGAL KIRIM: {data.get('tanggal_kirim', '')}",
+                "",
+                f"JENIS BAHAN : {data.get('jenis_bahan', '')}",
+                f"QTY BAHAN   : {data.get('qty_bahan', '')}",
+                f"UKURAN CETAK: {data.get('ukuran_cetak', '')}",
+                f"JUMLAH CETAK: {data.get('jumlah_cetak', '')}",
+                f"INSHEET     : {data.get('insheet', '')}",
+                f"TOTAL CETAK : {data.get('total_cetak', '')}",
+                f"WARNA       : {data.get('warna', '')}",
+                f"VARNISH     : {data.get('varnish', '')}",
+                f"FINISHING   : {data.get('finishing', '')}",
+            ]:
+                c.drawString(50, y, line)
+                y -= 15
+
+            # Gambar: desain, barcode, dummy
+            y -= 30
+            try:
+                from reportlab.lib.utils import ImageReader
+                
+                # Generate barcode sementara
+                barcode_path = f"temp_barcode_{spk_id}.png"
+                qr = qrcode.make(f"SPK-{spk_id}")
+                qr.save(barcode_path)
+                
+                # Gambar desain
+                if desain_path and os.path.exists(desain_path):
+                    c.drawImage(desain_path, 50, y-100, width=100, height=100)
+                
+                # Gambar barcode
+                if os.path.exists(barcode_path):
+                    c.drawImage(barcode_path, 170, y-100, width=100, height=100)
+                    os.remove(barcode_path)  # Hapus file sementara
+                
+                # Gambar dummy
+                if dummy_path and os.path.exists(dummy_path):
+                    c.drawImage(dummy_path, 290, y-100, width=100, height=100)
+                    
+            except Exception as e:
+                print(f"Error adding images to PDF: {e}")
+
+            c.save()
+            
+            # Cetak otomatis (opsional)
+            self.print_pdf(filepath)
+            
+            messagebox.showinfo("Sukses", f"SPK berhasil disimpan dan PDF telah dibuat:\n{filepath}")
+            
+        except Exception as e:
+            messagebox.showerror("Gagal Buat PDF", f"Gagal membuat file PDF:\n{e}")
+
+    def print_pdf(self, filepath):
+        """Fungsi untuk mencetak PDF secara otomatis"""
+        try:
+            if platform.system() == "Windows":
+                os.startfile(filepath, "print")
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.run(["lp", filepath])
+            else:  # Linux
+                subprocess.run(["lp", filepath])
+        except Exception as e:
+            print(f"Gagal mencetak PDF: {e}")
+            
+    def generate_barcode_image(self, data):
+        """Generate QR Code image"""
+        import qrcode
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+        return qr.make_image(fill_color="black", back_color="white")
+    
     def go_dashboard(self):
         self.master.switch_frame(__import__('ui_dashboard').DashboardFrame)
 
@@ -230,14 +375,14 @@ class SPKInputFrame(tk.Frame):
         self.selected_tahapan.grid(row=0, column=1, padx=5)
 
         tk.Label(tambah_frame, text="Mulai (tgl & jam):").grid(row=0, column=2)
-        self.mulai_tanggal = DateEntry(tambah_frame, width=10)
+        self.mulai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID")
         self.mulai_tanggal.grid(row=0, column=3)
         self.mulai_jam = tk.Entry(tambah_frame, width=5)
         self.mulai_jam.insert(0, "08:00")
         self.mulai_jam.grid(row=0, column=4, padx=(0, 5))
 
         tk.Label(tambah_frame, text="Selesai (tgl & jam):").grid(row=0, column=5)
-        self.selesai_tanggal = DateEntry(tambah_frame, width=10)
+        self.selesai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID")
         self.selesai_tanggal.grid(row=0, column=6)
         self.selesai_jam = tk.Entry(tambah_frame, width=5)
         self.selesai_jam.insert(0, "17:00")
@@ -262,8 +407,8 @@ class SPKInputFrame(tk.Frame):
 
     def tambah_tahapan(self):
         tahap = self.selected_tahapan.get()
-        mulai = f"{self.mulai_tanggal.get()} {self.mulai_jam.get()}"
-        selesai = f"{self.selesai_tanggal.get()} {self.selesai_jam.get()}"
+        mulai = f"{self.mulai_tanggal.get_date().strftime('%Y-%m-%d')} {self.mulai_jam.get()}"
+        selesai = f"{self.selesai_tanggal.get_date().strftime('%Y-%m-%d')} {self.selesai_jam.get()}"
 
         if not tahap:
             messagebox.showwarning("Input Kosong", "Pilih tahapan terlebih dahulu.")
@@ -292,9 +437,9 @@ class SPKInputFrame(tk.Frame):
     def upload_desain(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg *.bmp")])
         if file_path:
-            self.desain_temp_path = file_path  # Simpan path asli sementara
+            self.desain_temp_path = file_path
             image = Image.open(file_path)
-            image = image.resize((100, 100))  # Ukuran thumbnail
+            image = image.resize((100, 100))
             photo = ImageTk.PhotoImage(image)
 
             if hasattr(self, 'desain_label'):
@@ -303,14 +448,19 @@ class SPKInputFrame(tk.Frame):
             else:
                 self.desain_label = tk.Label(self, image=photo)
                 self.desain_label.image = photo
-                self.desain_label.grid(row=15, column=2)  # Atur posisi sesuai layout kamu
+                self.desain_label.grid(row=15, column=2)
+
+    def remove_desain(self):
+        if self.desain_label:
+            self.desain_label.configure(image="")
+            self.desain_temp_path = None
 
     def upload_dummy(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg *.bmp")])
         if file_path:
-            self.dummy_temp_path = file_path  # Simpan path sementara
+            self.dummy_temp_path = file_path
             image = Image.open(file_path)
-            image = image.resize((100, 100))  # Atur ukuran thumbnail
+            image = image.resize((100, 100))
             photo = ImageTk.PhotoImage(image)
 
             if hasattr(self, 'dummy_label'):
@@ -319,5 +469,8 @@ class SPKInputFrame(tk.Frame):
             else:
                 self.dummy_label = tk.Label(self, image=photo)
                 self.dummy_label.image = photo
-                self.dummy_label.grid(row=16, column=2)  # Atur posisi sesuai UI kamu
-
+                self.dummy_label.grid(row=16, column=2)
+    def remove_dummy(self):
+        if self.dummy_label:
+            self.dummy_label.configure(image="")
+            self.dummy_temp_path = None
