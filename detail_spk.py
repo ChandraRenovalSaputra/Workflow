@@ -19,22 +19,27 @@ class DetailSPKFrame(Frame):
         self.configure(bg='white')
         
         # Scrollable Frame
-        canvas = Canvas(self, bg='white', highlightthickness=0)
-        scrollbar = Scrollbar(self, orient="vertical", command=canvas.yview)
+        self.canvas = Canvas(self, bg='white', highlightthickness=0)
+        self.scrollbar = Scrollbar(self, orient="vertical", command=canvas.yview)
         self.scrollable_frame = Frame(canvas, bg='white')
-        
+
         self.scrollable_frame.bind(
             "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
             )
         )
-        
-        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        # Perbaikan di sini
+        self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+                                                                                
+        self.bind_scroll_event()
 
         # Header
         Label(self.scrollable_frame, text=f"Detail SPK - {spk_id}", 
@@ -181,6 +186,17 @@ class DetailSPKFrame(Frame):
         Button(self.scrollable_frame, text="Kembali ke Jadwal", 
               font=('Arial', 12, 'bold'), bg='#dc3545', fg='white', 
               command=self.kembali_ke_jadwal).pack(pady=20)
+    
+    def bind_scroll_event(self):
+        """Binding scroll agar bisa dipakai di Windows"""
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_mousewheel(self, event):
+        """Fungsi scroll mouse (untuk Windows)"""
+        self.canvas.yview_scroll(-1 * int(event.delta / 120), "units")
+
+
+
 
     def generate_barcode_image(self, size=(200, 200)):
         """Generate QR Code untuk SPK"""
