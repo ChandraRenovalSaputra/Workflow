@@ -58,7 +58,7 @@ class SPKInputFrame(tk.Frame):
         for field in form_fields:
             self.add_form_row(field[0], field[1] if len(field) > 1 else None)
 
-       # ===== Upload Gambar Desain & Dummy =====
+        # ===== Upload Gambar Desain & Dummy =====
         tk.Label(self.container, text="Upload Gambar Desain:").pack(anchor="w", padx=20)
         self.desain_label = tk.Label(self.container, text="Belum ada file", fg="gray")
         self.desain_label.pack(anchor="w", padx=20)
@@ -82,9 +82,7 @@ class SPKInputFrame(tk.Frame):
         tk.Button(button_frame, text="Hapus", command=self.clear_form, width=15).pack(side="left", padx=10)
         tk.Button(button_frame, text="Simpan", command=self.save_spk, width=15).pack(side="left", padx=10)
 
-
-
-# ====================================================DEF===================================================
+    # ====================================================DEF===================================================
     def add_form_row(self, label_text, input_type=None):
         frame = tk.Frame(self.container)
         frame.pack(fill="x", pady=3, padx=20)
@@ -94,7 +92,7 @@ class SPKInputFrame(tk.Frame):
 
         if input_type == "date":
             today = datetime.today().date()
-            entry = DateEntry(frame, date_pattern='yyyy-mm-dd', mindate=today)
+            entry = DateEntry(frame, date_pattern='yyyy-mm-dd', mindate=today, state="readonly")
         else:
             entry = tk.Entry(frame)
         entry.pack(side="left", fill="x", expand=True)
@@ -226,15 +224,15 @@ class SPKInputFrame(tk.Frame):
                 ''', (spk_id, tahap, mulai, selesai))
 
             conn.commit()
-            
+
             # Generate nama file PDF berdasarkan costumer dan nama artikel
             costumer = data["COSTUMER"].replace(" ", "_")
             artikel = data["NAMA ARTIKEL"].replace(" ", "_")
             pdf_filename = f"{costumer}_{artikel}.pdf"
-            
+
             # Buat PDF otomatis
             self.generate_pdf(spk_id, gambar_desain_path, gambar_dummy_path, pdf_filename)
-            
+
             conn.close()
 
             self.controller.show_preview_frame(spk_id)
@@ -247,7 +245,7 @@ class SPKInputFrame(tk.Frame):
         """Fungsi untuk membuat PDF SPK"""
         os.makedirs("spk_output", exist_ok=True)
         filepath = os.path.join("spk_output", filename)
-        
+
         try:
             # Ambil data dari database
             conn = get_workflow_conn()
@@ -295,35 +293,35 @@ class SPKInputFrame(tk.Frame):
             y -= 30
             try:
                 from reportlab.lib.utils import ImageReader
-                
+
                 # Generate barcode sementara
                 barcode_path = f"temp_barcode_{spk_id}.png"
                 qr = qrcode.make(f"SPK-{spk_id}")
                 qr.save(barcode_path)
-                
+
                 # Gambar desain
                 if desain_path and os.path.exists(desain_path):
                     c.drawImage(desain_path, 50, y-100, width=100, height=100)
-                
+
                 # Gambar barcode
                 if os.path.exists(barcode_path):
                     c.drawImage(barcode_path, 170, y-100, width=100, height=100)
                     os.remove(barcode_path)  # Hapus file sementara
-                
+
                 # Gambar dummy
                 if dummy_path and os.path.exists(dummy_path):
                     c.drawImage(dummy_path, 290, y-100, width=100, height=100)
-                    
+
             except Exception as e:
                 print(f"Error adding images to PDF: {e}")
 
             c.save()
-            
+
             # Cetak otomatis (opsional)
             self.print_pdf(filepath)
-            
+
             messagebox.showinfo("Sukses", f"SPK berhasil disimpan dan PDF telah dibuat:\n{filepath}")
-            
+
         except Exception as e:
             messagebox.showerror("Gagal Buat PDF", f"Gagal membuat file PDF:\n{e}")
 
@@ -338,7 +336,7 @@ class SPKInputFrame(tk.Frame):
                 subprocess.run(["lp", filepath])
         except Exception as e:
             print(f"Gagal mencetak PDF: {e}")
-            
+
     def generate_barcode_image(self, data):
         """Generate QR Code image"""
         import qrcode
@@ -351,7 +349,7 @@ class SPKInputFrame(tk.Frame):
         qr.add_data(data)
         qr.make(fit=True)
         return qr.make_image(fill_color="black", back_color="white")
-    
+
     def go_dashboard(self):
         self.master.switch_frame(__import__('ui_dashboard').DashboardFrame)
 
@@ -375,14 +373,14 @@ class SPKInputFrame(tk.Frame):
         self.selected_tahapan.grid(row=0, column=1, padx=5)
 
         tk.Label(tambah_frame, text="Mulai (tgl & jam):").grid(row=0, column=2)
-        self.mulai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID")
+        self.mulai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly")
         self.mulai_tanggal.grid(row=0, column=3)
         self.mulai_jam = tk.Entry(tambah_frame, width=5)
         self.mulai_jam.insert(0, "08:00")
         self.mulai_jam.grid(row=0, column=4, padx=(0, 5))
 
         tk.Label(tambah_frame, text="Selesai (tgl & jam):").grid(row=0, column=5)
-        self.selesai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID")
+        self.selesai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly")
         self.selesai_tanggal.grid(row=0, column=6)
         self.selesai_jam = tk.Entry(tambah_frame, width=5)
         self.selesai_jam.insert(0, "17:00")
@@ -410,15 +408,30 @@ class SPKInputFrame(tk.Frame):
         mulai = f"{self.mulai_tanggal.get_date().strftime('%Y-%m-%d')} {self.mulai_jam.get()}"
         selesai = f"{self.selesai_tanggal.get_date().strftime('%Y-%m-%d')} {self.selesai_jam.get()}"
 
-        if not tahap:
-            messagebox.showwarning("Input Kosong", "Pilih tahapan terlebih dahulu.")
+
+        for data in self.estimasi_rows.values():
+            if not tahap or tahap in data:
+                messagebox.showwarning("Kesalahan Input", "Pastikan Isi Tahapan dan Tidak Boleh Sama.")
+                return
+
+        if datetime.strptime(mulai, "%Y-%m-%d %H:%M") >= datetime.strptime(selesai, "%Y-%m-%d %H:%M"):
+            messagebox.showwarning("Kesalahan Input", "Tanggal & Jam Mulai Harus Sebelum Tanggal & Jam Selesai.")
             return
+
+        if self.estimasi_rows:
+            estimasi_selesai = list(self.estimasi_rows.values())
+            dt_selesai = datetime.strptime(estimasi_selesai[-1][2], "%Y-%m-%d %H:%M")
+            dt_mulai = datetime.strptime(mulai, "%Y-%m-%d %H:%M")
+            if dt_mulai <= dt_selesai:
+                messagebox.showwarning("Kesalahan Jadwal", "Jadwal Tahapan Tidak Boleh Bentrok.")
+                return
 
         # Tambah ke tabel
         row_id = self.estimasi_table.insert("", "end", values=(tahap, mulai, selesai, "❌"))
 
         # Simpan referensi tombol hapus
         self.estimasi_rows[row_id] = (tahap, mulai, selesai)
+        print(f"estimasi row: {self.estimasi_rows}")
         self.estimasi_table.bind("<Button-1>", self.hapus_row_tahapan)
 
     def hapus_row_tahapan(self, event):
