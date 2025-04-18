@@ -20,8 +20,8 @@ class DetailSPKFrame(Frame):
         
         # Scrollable Frame
         self.canvas = Canvas(self, bg='white', highlightthickness=0)
-        self.scrollbar = Scrollbar(self, orient="vertical", command=canvas.yview)
-        self.scrollable_frame = Frame(canvas, bg='white')
+        self.scrollbar = Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = Frame(self.canvas, bg='white')
 
         self.scrollable_frame.bind(
             "<Configure>",
@@ -34,7 +34,7 @@ class DetailSPKFrame(Frame):
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
         # Perbaikan di sini
-        self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
