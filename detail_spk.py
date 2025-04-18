@@ -42,8 +42,8 @@ class DetailSPKFrame(Frame):
         self.bind_scroll_event()
 
         # Header
-        Label(self.scrollable_frame, text=f"📄 Detail SPK - {spk_id}", 
-            font=('Segoe UI', 18, 'bold'), bg='#007BFF', fg='white', pady=10).pack(pady=10, fill=X)
+        Label(self.scrollable_frame, text=f"🧾 Detail SPK - {spk_id}", 
+            font=('Segoe UI', 18, 'bold'), bg='#1E90FF', fg='white', padx=10, pady=10).pack(pady=(0, 20), fill=X)
 
 
         # Data Utama SPK
@@ -85,7 +85,6 @@ class DetailSPKFrame(Frame):
                 desain_frame.grid(row=0, column=0, padx=10)
                 Label(desain_frame, image=self.photo_desain, bg='white').pack()
                 Label(desain_frame, text="Desain", bg='white', font=('Arial', 10, 'bold')).pack()
-                Frame(desain_frame, height=2, bg='#ccc').pack(fill=X, pady=(5,0))  # garis pemisah
             except Exception as e:
                 print(f"Error loading design image: {e}")
                 Label(img_frame, text="Gambar desain tidak tersedia", bg='white').grid(row=0, column=0)
@@ -127,13 +126,8 @@ class DetailSPKFrame(Frame):
                 Label(img_frame, text="Gambar dummy tidak tersedia", bg='white').grid(row=0, column=2)
 
         # ===== WORKFLOW/Tahapan Produksi =====
-        info_frame = Frame(self.scrollable_frame, bg='white')
-        info_frame.pack(pady=10, padx=20, fill=X)
-
-        for label_text in detail_text.split("\n"):
-            Label(info_frame, text=label_text, bg='#f8f9fa', anchor='w',
-                font=('Segoe UI', 11), padx=10, pady=5, relief='groove').pack(fill=X, pady=2)
-
+        Label(self.scrollable_frame, text="WORKFLOW PRODUKSI", 
+             font=('Arial', 14, 'bold'), bg='white').pack(pady=10)
         
         # Frame untuk tabel workflow
         workflow_frame = Frame(self.scrollable_frame, bg='white')
@@ -150,15 +144,6 @@ class DetailSPKFrame(Frame):
             self.keterangan_vars = []  # Untuk menyimpan StringVar keterangan
             
             for row, (tahap, mulai, selesai, keterangan) in enumerate(tahapan_data, start=1):
-
-                # Tambahkan warna zebra striping
-                for row_index in range(1, len(tahapan_data)+1):
-                    for col_index in range(len(headers)):
-                        widget = workflow_frame.grid_slaves(row=row_index, column=col_index)
-                        if widget:
-                            bg = '#ffffff' if row_index % 2 == 0 else '#f9f9f9'
-                            widget[0].configure(bg=bg)
-
                 # Tentukan status
                 status, bg_color = self.tentukan_status(mulai, selesai)
                 
@@ -193,14 +178,15 @@ class DetailSPKFrame(Frame):
                     keterangan_var.set("Harap isi alasan keterlambatan")
                     entry.config(bg="#FFF3CD")  # Warna kuning untuk highlight
         
-        Button(self.scrollable_frame, text="💾 Simpan Keterangan", 
-            command=self.simpan_keterangan, bg='#28a745', fg='white',
-            font=('Segoe UI', 10, 'bold'), padx=10, pady=5).pack(pady=10)
-
-        Button(self.scrollable_frame, text="⬅️ Kembali ke Jadwal", 
-            font=('Segoe UI', 12, 'bold'), bg='#dc3545', fg='white', 
-            command=self.kembali_ke_jadwal, padx=10, pady=5).pack(pady=20)
-
+        # Tombol Simpan Keterangan
+        Button(self.scrollable_frame, text="Simpan Keterangan", 
+              command=self.simpan_keterangan, bg='#28a745', fg='white',
+              font=('Arial', 10, 'bold')).pack(pady=10)
+        
+        # Tombol Kembali
+        Button(self.scrollable_frame, text="Kembali ke Jadwal", 
+              font=('Arial', 12, 'bold'), bg='#dc3545', fg='white', 
+              command=self.kembali_ke_jadwal).pack(pady=20)
     
     def bind_scroll_event(self):
         """Binding scroll agar bisa dipakai di Windows"""
