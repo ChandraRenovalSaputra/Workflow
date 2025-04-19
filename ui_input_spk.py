@@ -77,8 +77,8 @@ class SPKInputFrame(tk.Frame):
         upload_frame.pack(fill="x", padx=40, pady=30)
 
         # Upload Desain
-        tk.Label(upload_frame, text="Upload Gambar Desain:", bg="#f0f2f5", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 2))
-        self.desain_label = tk.Label(upload_frame, text="Belum ada file", fg="gray", bg="#f0f2f5")
+        tk.Label(upload_frame, text="Upload Gambar Desain:", bg="#f0f2f5", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(10, 2))
+        self.desain_label = tk.Label(upload_frame, text="Belum ada file", fg="gray", bg="#f0f2f5", font=11)
         self.desain_label.pack(anchor="w")
 
         button_frame_desain = tk.Frame(upload_frame, bg="#f0f2f5")
@@ -88,8 +88,8 @@ class SPKInputFrame(tk.Frame):
         tk.Button(button_frame_desain, text="Hapus File", command=self.remove_desain, bg="#F44336", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)  
 
         # Upload Dummy
-        tk.Label(upload_frame, text="Upload Gambar Dummy:", bg="#f0f2f5", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 2))
-        self.dummy_label = tk.Label(upload_frame, text="Belum ada file", fg="gray", bg="#f0f2f5")
+        tk.Label(upload_frame, text="Upload Gambar Dummy:", bg="#f0f2f5", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(10, 2))
+        self.dummy_label = tk.Label(upload_frame, text="Belum ada file", fg="gray", bg="#f0f2f5", font=11)
         self.dummy_label.pack(anchor="w")
 
         button_frame_dummy = tk.Frame(upload_frame, bg="#f0f2f5")
@@ -113,10 +113,36 @@ class SPKInputFrame(tk.Frame):
             "relief": "flat"
         }
 
+        # Gaya umum untuk tombol besar
+        button_font = ("Arial", 14, "bold")
+        button_padx = 20
+        button_pady = 10
+
+        def make_hover_button(parent, text, command, bg, hover_bg):
+            btn = tk.Button(
+                parent,
+                text=text,
+                command=command,
+                bg=bg,
+                fg="white",
+                font=button_font,
+                padx=button_padx,
+                pady=button_pady,
+                relief="flat",
+                cursor="hand2"
+            )
+            btn.pack(side="left", padx=20)
+
+            # Hover effect
+            btn.bind("<Enter>", lambda e: btn.config(bg=hover_bg))
+            btn.bind("<Leave>", lambda e: btn.config(bg=bg))
+            return btn
+
         # Membuat tombol navigasi di tengah
-        tk.Button(button_frame, text="Dashboard", command=self.go_dashboard, bg="#2196F3", fg="white", **style).pack(side="left", padx=10)
-        tk.Button(button_frame, text="Hapus", command=self.clear_form, bg="#F44336", fg="white", **style).pack(side="left", padx=10)
-        tk.Button(button_frame, text="Simpan", command=self.save_spk, bg="#4CAF50", fg="white", **style).pack(side="left", padx=10)
+        make_hover_button(button_frame, "Dashboard", self.go_dashboard, "#2196F3", "#1976D2")
+        make_hover_button(button_frame, "Hapus", self.clear_form, "#F44336", "#C62828")
+        make_hover_button(button_frame, "Simpan", self.save_spk, "#4CAF50", "#2E7D32")
+
 
     # ====================================================DEF===================================================
     def add_form_row(self, label_text, input_type=None):
@@ -127,8 +153,34 @@ class SPKInputFrame(tk.Frame):
         label.pack(side="left", padx=(0, 10))
 
         if input_type == "date":
+            # Custom style for DateEntry
+            style = ttk.Style()
+            style.theme_use("default")
+
+            style.configure(
+                "my.DateEntry",
+                fieldbackground="white",
+                background="#0078D7",
+                foreground="black",
+                arrowcolor="white",
+                bordercolor="#ccc",
+                lightcolor="#0078D7",
+                darkcolor="#005a9e",
+                relief="flat",
+                padding=5
+            )
+
             today = datetime.today().date()
-            entry = DateEntry(frame, date_pattern='yyyy-mm-dd', mindate=today, state="readonly")
+            entry = DateEntry(
+                frame,
+                date_pattern='yyyy-mm-dd',
+                mindate=today,
+                state="readonly",
+                width=20,
+                style="my.DateEntry",
+                font=("Segoe UI", 11)
+            )
+
         else:
             entry = tk.Entry(frame, font=("Segoe UI", 11), width=40, relief="solid", bd=1)
         entry.pack(side="left", fill="x", expand=True)
@@ -391,64 +443,96 @@ class SPKInputFrame(tk.Frame):
 
     def build_estimasi_section(self):
         separator = ttk.Separator(self.container, orient="horizontal")
-        separator.pack(fill="x", pady=15)
+        separator.pack(fill="x", pady=20)
 
-        tk.Label(self.container, text="Estimasi Tahapan Produksi", font=("Arial", 16, "bold"), padx=10, pady=5).pack(pady=(10, 5), fill="x")
+        tk.Label(
+            self.container,
+            text="Estimasi Tahapan Produksi",
+            font=("Arial", 24, "bold"),
+            padx=10,
+            pady=10
+        ).pack(pady=(10, 10), fill="x")
 
         # Frame Tambah Tahapan
-        tambah_frame = tk.Frame(self.container, bg="#f9f9f9", relief="solid", borderwidth=1)
-        tambah_frame.pack(pady=15, padx=20, fill="x", ipady=10)
+        tambah_frame = tk.Frame(self.container, bg="#ffffff", relief="groove", borderwidth=2)
+        tambah_frame.pack(pady=20, padx=30, fill="x", ipady=15)
 
         self.tahapan_options = [
             "DESAIN", "ACC DESAIN", "DUMMY", "CTP", "POTONG BAHAN", "CETAK",
             "POND", "FORMING", "LAMINATING", "PACKING", "PENGIRIMAN", "DITERIMA COSTUMER"
         ]
 
-        tk.Label(tambah_frame, text="Tahapan:", font=("Arial", 11, "bold"), bg="#f9f9f9").grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.selected_tahapan = ttk.Combobox(tambah_frame, values=self.tahapan_options, state="readonly", width=18)
-        self.selected_tahapan.grid(row=0, column=1, padx=10, pady=5)
+        label_font = ("Arial", 16, "bold")
+        entry_font = ("Arial", 16)
 
-        tk.Label(tambah_frame, text="Mulai (tgl & jam):", font=("Arial", 11, "bold"), bg="#f9f9f9").grid(row=0, column=2, padx=10, pady=5, sticky="w")
-        self.mulai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly")
-        self.mulai_tanggal.grid(row=0, column=3, padx=10, pady=5)
-        self.mulai_jam = tk.Entry(tambah_frame, width=7)
+        # Baris input
+        tk.Label(tambah_frame, text="Tahapan:", font=label_font, bg="#ffffff").grid(row=0, column=0, padx=12, pady=10, sticky="w")
+        self.selected_tahapan = ttk.Combobox(
+            tambah_frame,
+            values=self.tahapan_options,
+            state="readonly",
+            width=25,
+            font=("Arial", 16),
+            style="Big.TCombobox"  # pakai style besar
+        )
+
+        self.selected_tahapan.grid(row=0, column=1, padx=12, pady=10)
+
+        tk.Label(tambah_frame, text="Mulai (tgl & jam):", font=label_font, bg="#ffffff").grid(row=0, column=2, padx=12, pady=10, sticky="w")
+        self.mulai_tanggal = DateEntry(tambah_frame, width=12, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly", font=entry_font)
+        self.mulai_tanggal.grid(row=0, column=3, padx=5, pady=10)
+        self.mulai_jam = tk.Entry(tambah_frame, width=8, font=entry_font)
         self.mulai_jam.insert(0, "08:00")
-        self.mulai_jam.grid(row=0, column=4, padx=10, pady=5)
+        self.mulai_jam.grid(row=0, column=4, padx=5, pady=10)
 
-        tk.Label(tambah_frame, text="Selesai (tgl & jam):", font=("Arial", 11, "bold"), bg="#f9f9f9").grid(row=0, column=5, padx=10, pady=5, sticky="w")
-        self.selesai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly")
-        self.selesai_tanggal.grid(row=0, column=6, padx=10, pady=5)
-        self.selesai_jam = tk.Entry(tambah_frame, width=7)
+        tk.Label(tambah_frame, text="Selesai (tgl & jam):", font=label_font, bg="#ffffff").grid(row=0, column=5, padx=12, pady=10, sticky="w")
+        self.selesai_tanggal = DateEntry(tambah_frame, width=12, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly", font=entry_font)
+        self.selesai_tanggal.grid(row=0, column=6, padx=5, pady=10)
+        self.selesai_jam = tk.Entry(tambah_frame, width=8, font=entry_font)
         self.selesai_jam.insert(0, "17:00")
-        self.selesai_jam.grid(row=0, column=7, padx=10, pady=5)
+        self.selesai_jam.grid(row=0, column=7, padx=5, pady=10)
 
-        # Tombol "Tambah" dengan desain lebih menarik
-        add_button = tk.Button(tambah_frame, text="Tambah", command=self.tambah_tahapan, bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), relief="flat")
-        add_button.grid(row=0, column=8, padx=10, pady=5)
-        add_button.bind("<Enter>", lambda e: add_button.config(bg="#45a049"))  # Hover effect
-        add_button.bind("<Leave>", lambda e: add_button.config(bg="#4CAF50"))  # Hover effect
+        # Tombol "Tambah"
+        add_button = tk.Button(
+            tambah_frame,
+            text="➕ Tambah",
+            command=self.tambah_tahapan,
+            bg="#28a745",
+            fg="white",
+            font=("Arial", 12, "bold"),
+            padx=15,
+            pady=5,
+            relief="flat",
+            cursor="hand2"
+        )
+        add_button.grid(row=0, column=8, padx=15, pady=10)
+        add_button.bind("<Enter>", lambda e: add_button.config(bg="#218838"))
+        add_button.bind("<Leave>", lambda e: add_button.config(bg="#28a745"))
 
         # Tabel Estimasi
+        style = ttk.Style()
+        style.configure("Treeview.Heading", font=("Arial", 16, "bold"))
+        style.configure("Treeview", font=("Arial", 14), rowheight=40)
+
         self.estimasi_table = ttk.Treeview(self.container, columns=("Tahap", "Mulai", "Selesai", "Aksi"), show="headings", height=8)
         self.estimasi_table.heading("Tahap", text="Tahapan", anchor="center")
         self.estimasi_table.heading("Mulai", text="Mulai", anchor="center")
         self.estimasi_table.heading("Selesai", text="Selesai", anchor="center")
         self.estimasi_table.heading("Aksi", text="Aksi", anchor="center")
 
-        # Lebar kolom
-        self.estimasi_table.column("Tahap", width=160, anchor="center")
-        self.estimasi_table.column("Mulai", width=160, anchor="center")
-        self.estimasi_table.column("Selesai", width=160, anchor="center")
-        self.estimasi_table.column("Aksi", width=80, anchor="center")
+        self.estimasi_table.column("Tahap", width=350, anchor="center")
+        self.estimasi_table.column("Mulai", width=350, anchor="center")
+        self.estimasi_table.column("Selesai", width=350, anchor="center")
+        self.estimasi_table.column("Aksi", width=350, anchor="center")
 
-        self.estimasi_table.pack(pady=15, padx=20)
+        self.estimasi_table.pack(pady=20, padx=30)
         self.estimasi_rows = {}
 
-        # Menambahkan style untuk tabel
-        self.estimasi_table.tag_configure('oddrow', background="#f9f9f9", font=("Arial", 9))
-        self.estimasi_table.tag_configure('evenrow', background="#eaeaea", font=("Arial", 9))
+        self.estimasi_table.tag_configure('oddrow', background="#ffffff")
+        self.estimasi_table.tag_configure('evenrow', background="#f0f0f0")
 
         self.estimasi_table.bind("<Button-1>", self.hapus_row_tahapan)
+
 
 
     def tambah_tahapan(self):

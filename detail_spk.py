@@ -17,7 +17,7 @@ class DetailSPKFrame(Frame):
         self.controller = controller
         self.spk_id = spk_id
         self.configure(bg='white')
-        
+            
         # Scrollable Frame
         self.canvas = Canvas(self, bg='white', highlightthickness=0)
         self.scrollbar = Scrollbar(self, orient="vertical", command=self.canvas.yview)
@@ -49,25 +49,33 @@ class DetailSPKFrame(Frame):
         # Data Utama SPK
         spk_data, tahapan_data = get_spk_details(spk_id)
         if spk_data:
-            detail_text = (
-                f"ORDER SALES          : {spk_data[1]}\n"
-                f"NO PO                         : {spk_data[2]}\n"
-                f"COSTUMER               : {spk_data[3]}\n"
-                f"NAMA ARTIKEL       : {spk_data[4]}\n"
-                f"QTY                             : {spk_data[5]}\n"
-                f"TANGGAL KIRIM      : {spk_data[6]}\n"
-                f"JENIS BAHAN          : {spk_data[7]}\n"
-                f"QTY BAHAN            : {spk_data[8]}\n"
-                f"UKURAN CETAK       : {spk_data[9]}\n"
-                f"JUMLAH CETAK      : {spk_data[10]}\n"
-                f"INSHEET                   : {spk_data[11]}\n"
-                f"TOTAL CETAK         : {spk_data[12]}\n"
-                f"WARNA                     : {spk_data[13]}\n"
-                f"VARNISH                  : {spk_data[14]}\n"
-                f"FINISHING                : {spk_data[15]}"
-            )
-            Label(self.scrollable_frame, text=detail_text, bg='white', 
-                 font=('Arial', 12), justify="left").pack(pady=5, padx=20, anchor="w")
+            detail_frame = Frame(self.scrollable_frame, bg='white')
+            detail_frame.pack(pady=5, padx=30, anchor="w")
+
+            labels = [
+                ("ORDER SALES", spk_data[1]),
+                ("NO PO", spk_data[2]),
+                ("CUSTOMER", spk_data[3]),
+                ("NAMA ARTIKEL", spk_data[4]),
+                ("QTY", spk_data[5]),
+                ("TANGGAL KIRIM", spk_data[6]),
+                ("JENIS BAHAN", spk_data[7]),
+                ("QTY BAHAN", spk_data[8]),
+                ("UKURAN CETAK", spk_data[9]),
+                ("JUMLAH CETAK", spk_data[10]),
+                ("INSHEET", spk_data[11]),
+                ("TOTAL CETAK", spk_data[12]),
+                ("WARNA", spk_data[13]),
+                ("VARNISH", spk_data[14]),
+                ("FINISHING", spk_data[15]),
+            ]
+
+            for i, (label_text, value) in enumerate(labels):
+                Label(detail_frame, text=f"{label_text}", font=('Segoe UI', 12, 'bold'), 
+                    bg='white', anchor="w", width=20).grid(row=i, column=0, sticky='w', pady=4)
+                Label(detail_frame, text=f":  {value}", font=('Segoe UI', 12), 
+                    bg='white', anchor="w").grid(row=i, column=1, sticky='w', pady=4)
+
         else:
             Label(self.scrollable_frame, text="❌ Data tidak ditemukan.", bg='white').pack()
 
@@ -187,6 +195,7 @@ class DetailSPKFrame(Frame):
         Button(self.scrollable_frame, text="Kembali ke Jadwal", 
               font=('Arial', 12, 'bold'), bg='#dc3545', fg='white', 
               command=self.kembali_ke_jadwal).pack(pady=20)
+
     
     def bind_scroll_event(self):
         """Binding scroll agar bisa dipakai di Windows"""

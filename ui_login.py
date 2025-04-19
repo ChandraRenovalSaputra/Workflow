@@ -76,6 +76,9 @@ class LoginFrame(tk.Frame):
         )
         register_btn.grid(row=7, column=0, columnspan=2)
 
+        self.bind_all("<Return>", lambda event: self.login())
+
+
     def create_labeled_entry(self, parent, label, row, show=None):
         tk.Label(
             parent,
