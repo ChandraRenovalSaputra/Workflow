@@ -34,7 +34,7 @@ class DetailSPKFrame(Frame):
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
         
-        self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
