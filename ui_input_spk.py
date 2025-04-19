@@ -28,7 +28,7 @@ class SPKInputFrame(tk.Frame):
         self.gambar_dummy = None
 
         self.configure(bg="#f0f2f5")
-        
+
         # ===== Scrollable Frame =====
         scroll = ScrollableFrame(self)
         scroll.pack(fill="both", expand=True)
@@ -72,7 +72,7 @@ class SPKInputFrame(tk.Frame):
         for field in form_fields:
             self.add_form_row(field[0], field[1] if len(field) > 1 else None)
 
-         # ===== Upload Gambar Section =====
+        # ===== Upload Gambar Section =====
         upload_frame = tk.Frame(self.container, bg="#f0f2f5")
         upload_frame.pack(fill="x", padx=40, pady=30)
 
@@ -429,9 +429,20 @@ class SPKInputFrame(tk.Frame):
         add_button.bind("<Leave>", lambda e: add_button.config(bg="#4CAF50"))  # Hover effect
 
         # Tabel Estimasi
-        self.estimasi_table = ttk.Treeview(self.container, columns=("Tahap", "Mulai", "Selesai", "Aksi"), show="headings", height=8)
+        self.estimasi_table = ttk.Treeview(
+            self.container, 
+            columns=("Tahap", "Mulai", "Selesai", "Aksi"), 
+            show="headings", 
+            height=8
+        )
         self.estimasi_table.heading("Tahap", text="Tahapan", anchor="center")
-        self.estimasi_table.heading("Mulai", text="Mulai", anchor="center")
+        # sorting tabel estimasi
+        self.estimasi_table.heading(
+            "Mulai", 
+            text="Mulai", 
+            anchor="center", 
+            command=self.sort_estimasi_table
+            )
         self.estimasi_table.heading("Selesai", text="Selesai", anchor="center")
         self.estimasi_table.heading("Aksi", text="Aksi", anchor="center")
 
@@ -449,44 +460,89 @@ class SPKInputFrame(tk.Frame):
         self.estimasi_table.tag_configure('evenrow', background="#eaeaea", font=("Arial", 9))
 
         self.estimasi_table.bind("<Button-1>", self.hapus_row_tahapan)
+    def parse_datetime(self, datetime_str):
+        try:
+            return datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
+        except ValueError:
+            return None
 
+    def validate_schedule(self, new_start, new_end):
+        # Check all existing schedules
+        for item in self.estimasi_table.get_children():
+            start_str = self.estimasi_table.item(item, "values")[1]
+            end_str = self.estimasi_table.item(item, "values")[2]
+            existing_start = self.parse_datetime(start_str)
+            existing_end = self.parse_datetime(end_str)
+
+            if (new_start < existing_end) and (new_end > existing_start):
+                return False, "Bentrok dengan jadwal yang sudah ada!"
+        return True, ""
+
+    def find_insert_position(self, new_start):
+        children = self.estimasi_table.get_children()
+        for pos, child in enumerate(children):
+            child_start_str = self.estimasi_table.item(child, "values")[1]
+            child_start = self.parse_datetime(child_start_str)
+            if new_start < child_start:
+                return pos
+        return "end"
+
+    def sort_estimasi_table(self):
+        items = [(self.estimasi_table.item(item, "values"), item) 
+                for item in self.estimasi_table.get_children()]
+
+        items.sort(key=lambda x: datetime.strptime(x[0][1], "%Y-%m-%d %H:%M"))
+
+        for index, (_, item) in enumerate(items):
+            self.estimasi_table.move(item, "", index)
 
     def tambah_tahapan(self):
         tahap = self.selected_tahapan.get()
         mulai = f"{self.mulai_tanggal.get_date().strftime('%Y-%m-%d')} {self.mulai_jam.get()}"
         selesai = f"{self.selesai_tanggal.get_date().strftime('%Y-%m-%d')} {self.selesai_jam.get()}"
 
-
-        for data in self.estimasi_rows.values():
-            if not tahap or tahap in data:
-                messagebox.showwarning("Kesalahan Input", "Pastikan Isi Tahapan dan Tidak Boleh Sama.")
-                return
-
-        if datetime.strptime(mulai, "%Y-%m-%d %H:%M") >= datetime.strptime(selesai, "%Y-%m-%d %H:%M"):
-            messagebox.showwarning("Kesalahan Input", "Tanggal & Jam Mulai Harus Sebelum Tanggal & Jam Selesai.")
+        # Validasi input
+        if not tahap:
+            messagebox.showwarning("Kesalahan Input", "Pilih tahapan terlebih dahulu!")
             return
 
-        if self.estimasi_rows:
-            estimasi_selesai = list(self.estimasi_rows.values())
-            dt_selesai = datetime.strptime(estimasi_selesai[-1][2], "%Y-%m-%d %H:%M")
-            dt_mulai = datetime.strptime(mulai, "%Y-%m-%d %H:%M")
-            if dt_mulai <= dt_selesai:
-                messagebox.showwarning("Kesalahan Jadwal", "Jadwal Tahapan Tidak Boleh Bentrok.")
-                return
+        # Parse waktu
+        try:
+            new_start = datetime.strptime(mulai, "%Y-%m-%d %H:%M")
+            new_end = datetime.strptime(selesai, "%Y-%m-%d %H:%M")
+        except ValueError:
+            messagebox.showwarning(
+                "Format Salah", "Format waktu tidak valid! Gunakan HH:MM"
+            )
+            return
 
-        # Tambah ke tabel
-        row_id = self.estimasi_table.insert("", "end", values=(tahap, mulai, selesai, "❌"))
+        # Validasi waktu
+        if new_start >= new_end:
+            messagebox.showwarning(
+                "Kesalahan Input", "Waktu mulai harus sebelum waktu selesai!"
+            )
+            return
 
-        # Menambahkan warna alternatif pada baris
-        row_tag = "oddrow" if len(self.estimasi_rows) % 2 == 0 else "evenrow"
-        self.estimasi_table.item(row_id, tags=row_tag)
+        # Validasi bentrok jadwal
+        valid, msg = self.validate_schedule(new_start, new_end)
+        if not valid:
+            messagebox.showerror("Bentrok Jadwal", msg)
+            return
 
-        # Simpan referensi tombol hapus
+        # Cari posisi insert
+        insert_pos = self.find_insert_position(new_start)
+
+        # Tambahkan ke treeview
+        row_id = self.estimasi_table.insert(
+            "", insert_pos, values=(tahap, mulai, selesai, "❌")
+        )
+
+        # Update data storage
         self.estimasi_rows[row_id] = (tahap, mulai, selesai)
 
-        # Efek hover pada tombol hapus
-        self.estimasi_table.bind("<Enter>", lambda e: self.estimasi_table.item(row_id, tags="hover"))
-
+        # Update tampilan
+        row_tag = "oddrow" if len(self.estimasi_rows) % 2 == 0 else "evenrow"
+        self.estimasi_table.item(row_id, tags=row_tag)
 
     def hapus_row_tahapan(self, event):
         region = self.estimasi_table.identify("region", event.x, event.y)
