@@ -19,32 +19,26 @@ class DetailSPKFrame(Frame):
         self.configure(bg='white')
         
         # Scrollable Frame
-        self.canvas = Canvas(self, bg='white', highlightthickness=0)
-        self.scrollbar = Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = Frame(self.canvas, bg='white')
-
+        canvas = Canvas(self, bg='white', highlightthickness=0)
+        scrollbar = Scrollbar(self, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = Frame(canvas, bg='white')
+        
         self.scrollable_frame.bind(
             "<Configure>",
-            lambda e: self.canvas.configure(
-                scrollregion=self.canvas.bbox("all")
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
             )
         )
-
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
         
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-                                                                                
-        self.bind_scroll_event()
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
         # Header
-        Label(self.scrollable_frame, text=f"🧾 Detail SPK - {spk_id}", 
-            font=('Segoe UI', 18, 'bold'), bg='#1E90FF', fg='white', padx=10, pady=10).pack(pady=(0, 20), fill=X)
-
+        Label(self.scrollable_frame, text=f"Detail SPK - {spk_id}", 
+              font=('Arial', 18, 'bold'), bg='blue', fg='white').pack(pady=10, fill=X)
 
         # Data Utama SPK
         spk_data, tahapan_data = get_spk_details(spk_id)
@@ -187,17 +181,6 @@ class DetailSPKFrame(Frame):
         Button(self.scrollable_frame, text="Kembali ke Jadwal", 
               font=('Arial', 12, 'bold'), bg='#dc3545', fg='white', 
               command=self.kembali_ke_jadwal).pack(pady=20)
-    
-    def bind_scroll_event(self):
-        """Binding scroll agar bisa dipakai di Windows"""
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-
-    def _on_mousewheel(self, event):
-        """Fungsi scroll mouse (untuk Windows)"""
-        self.canvas.yview_scroll(-1 * int(event.delta / 120), "units")
-
-
-
 
     def generate_barcode_image(self, size=(200, 200)):
         """Generate QR Code untuk SPK"""

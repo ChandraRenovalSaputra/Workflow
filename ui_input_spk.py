@@ -19,7 +19,7 @@ from reportlab.pdfgen import canvas
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg="#f0f2f5")
+        super().__init__(parent)
         self.controller = controller
         self.entries = {}
         self.desain_temp_path = None
@@ -27,26 +27,16 @@ class SPKInputFrame(tk.Frame):
         self.gambar_desain = None
         self.gambar_dummy = None
 
-        self.configure(bg="#f0f2f5")
-
-        # ===== Scrollable Frame =====
         scroll = ScrollableFrame(self)
         scroll.pack(fill="both", expand=True)
 
         self.container = scroll.scrollable_frame
-        self.container.configure(bg="#f0f2f5")
 
         # ===== Judul Halaman =====
-        title = tk.Label(
-            self.container,
-            text="📋 Input SPK",
-            font=("Segoe UI", 24, "bold"),
-            bg="#f0f2f5",
-            fg="#333",
-            pady=20
-        )
-        title.pack(fill="x", anchor="center", padx=20) 
+        title = tk.Label(self.container, text="Input SPK", font=("Arial", 20, "bold"))
+        title.pack(pady=10)
 
+        self.entries = {}
         form_fields = [
             ("ORDER SALES",),
             ("NO PO",),
@@ -65,72 +55,48 @@ class SPKInputFrame(tk.Frame):
             ("FINISHING",),
         ]
 
-        # ===== Form Input =====
-        form_frame = tk.Frame(self.container, bg="#f0f2f5")
-        form_frame.pack(fill="x", padx=40, pady=20)
-
         for field in form_fields:
             self.add_form_row(field[0], field[1] if len(field) > 1 else None)
 
-        # ===== Upload Gambar Section =====
-        upload_frame = tk.Frame(self.container, bg="#f0f2f5")
-        upload_frame.pack(fill="x", padx=40, pady=30)
+       # ===== Upload Gambar Desain & Dummy =====
+        tk.Label(self.container, text="Upload Gambar Desain:").pack(anchor="w", padx=20)
+        self.desain_label = tk.Label(self.container, text="Belum ada file", fg="gray")
+        self.desain_label.pack(anchor="w", padx=20)
+        tk.Button(self.container, text="Pilih File", command=self.upload_desain).pack(pady=(0,10), padx=20, anchor="w")
+        tk.Button(self.container, text="Hapus File", command=self.remove_desain).pack(pady=(0,10), padx=20, anchor="w")
 
-        # Upload Desain
-        tk.Label(upload_frame, text="Upload Gambar Desain:", bg="#f0f2f5", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 2))
-        self.desain_label = tk.Label(upload_frame, text="Belum ada file", fg="gray", bg="#f0f2f5")
-        self.desain_label.pack(anchor="w")
-
-        button_frame_desain = tk.Frame(upload_frame, bg="#f0f2f5")
-        button_frame_desain.pack(fill="x", pady=10)
-
-        tk.Button(button_frame_desain, text="Pilih File", command=self.upload_desain, bg="#007BFF", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)  
-        tk.Button(button_frame_desain, text="Hapus File", command=self.remove_desain, bg="#F44336", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)  
-
-        # Upload Dummy
-        tk.Label(upload_frame, text="Upload Gambar Dummy:", bg="#f0f2f5", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 2))
-        self.dummy_label = tk.Label(upload_frame, text="Belum ada file", fg="gray", bg="#f0f2f5")
-        self.dummy_label.pack(anchor="w")
-
-        button_frame_dummy = tk.Frame(upload_frame, bg="#f0f2f5")
-        button_frame_dummy.pack(fill="x", pady=10)
-
-        tk.Button(button_frame_dummy, text="Pilih File", command=self.upload_dummy, bg="#007BFF", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)  
-        tk.Button(button_frame_dummy, text="Hapus File", command=self.remove_dummy, bg="#F44336", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)  
+        tk.Label(self.container, text="Upload Gambar Dummy:").pack(anchor="w", padx=20)
+        self.dummy_label = tk.Label(self.container, text="Belum ada file", fg="gray")
+        self.dummy_label.pack(anchor="w", padx=20)
+        tk.Button(self.container, text="Pilih File", command=self.upload_dummy).pack(pady=(0,10), anchor="w", padx=20)
+        tk.Button(self.container, text="Hapus File", command=self.remove_dummy  ).pack(pady=(0,10), anchor="w", padx=20)
 
         # ===== Estimasi Tahapan =====
         self.build_estimasi_section()
 
-        # ===== Tombol Navigasi =====
-        button_frame = tk.Frame(self.container, bg="#f0f2f5")
-        button_frame.pack(pady=30, anchor="center")  # Center the button frame
+        # ===== Tombol Navigasi Paling Bawah =====
+        button_frame = tk.Frame(self.container)
+        button_frame.pack(pady=20)
 
-        style = {
-            "width": 15,
-            "font": ("Segoe UI", 10, "bold"),
-            "padx": 10,
-            "pady": 5,
-            "relief": "flat"
-        }
+        tk.Button(button_frame, text="Dashboard", command=self.go_dashboard, width=15).pack(side="left", padx=10)
+        tk.Button(button_frame, text="Hapus", command=self.clear_form, width=15).pack(side="left", padx=10)
+        tk.Button(button_frame, text="Simpan", command=self.save_spk, width=15).pack(side="left", padx=10)
 
-        # Membuat tombol navigasi di tengah
-        tk.Button(button_frame, text="Dashboard", command=self.go_dashboard, bg="#2196F3", fg="white", **style).pack(side="left", padx=10)
-        tk.Button(button_frame, text="Hapus", command=self.clear_form, bg="#F44336", fg="white", **style).pack(side="left", padx=10)
-        tk.Button(button_frame, text="Simpan", command=self.save_spk, bg="#4CAF50", fg="white", **style).pack(side="left", padx=10)
 
-    # ====================================================DEF===================================================
+
+# ====================================================DEF===================================================
     def add_form_row(self, label_text, input_type=None):
-        frame = tk.Frame(self.container, bg="#f0f2f5")
-        frame.pack(fill="x", pady=8, padx=60)
+        frame = tk.Frame(self.container)
+        frame.pack(fill="x", pady=3, padx=20)
 
-        label = tk.Label(frame, text=label_text + ":", font=("Segoe UI", 11), bg="#f0f2f5", width=20, anchor="w")
-        label.pack(side="left", padx=(0, 10))
+        label = tk.Label(frame, text=label_text, width=25, anchor="w")
+        label.pack(side="left")
 
         if input_type == "date":
             today = datetime.today().date()
-            entry = DateEntry(frame, date_pattern='yyyy-mm-dd', mindate=today, state="readonly")
+            entry = DateEntry(frame, date_pattern='yyyy-mm-dd', mindate=today)
         else:
-            entry = tk.Entry(frame, font=("Segoe UI", 11), width=40, relief="solid", bd=1)
+            entry = tk.Entry(frame)
         entry.pack(side="left", fill="x", expand=True)
 
         self.entries[label_text] = entry
@@ -260,15 +226,15 @@ class SPKInputFrame(tk.Frame):
                 ''', (spk_id, tahap, mulai, selesai))
 
             conn.commit()
-
+            
             # Generate nama file PDF berdasarkan costumer dan nama artikel
             costumer = data["COSTUMER"].replace(" ", "_")
             artikel = data["NAMA ARTIKEL"].replace(" ", "_")
             pdf_filename = f"{costumer}_{artikel}.pdf"
-
+            
             # Buat PDF otomatis
             self.generate_pdf(spk_id, gambar_desain_path, gambar_dummy_path, pdf_filename)
-
+            
             conn.close()
 
             self.controller.show_preview_frame(spk_id)
@@ -281,7 +247,7 @@ class SPKInputFrame(tk.Frame):
         """Fungsi untuk membuat PDF SPK"""
         os.makedirs("spk_output", exist_ok=True)
         filepath = os.path.join("spk_output", filename)
-
+        
         try:
             # Ambil data dari database
             conn = get_workflow_conn()
@@ -329,35 +295,35 @@ class SPKInputFrame(tk.Frame):
             y -= 30
             try:
                 from reportlab.lib.utils import ImageReader
-
+                
                 # Generate barcode sementara
                 barcode_path = f"temp_barcode_{spk_id}.png"
                 qr = qrcode.make(f"SPK-{spk_id}")
                 qr.save(barcode_path)
-
+                
                 # Gambar desain
                 if desain_path and os.path.exists(desain_path):
                     c.drawImage(desain_path, 50, y-100, width=100, height=100)
-
+                
                 # Gambar barcode
                 if os.path.exists(barcode_path):
                     c.drawImage(barcode_path, 170, y-100, width=100, height=100)
                     os.remove(barcode_path)  # Hapus file sementara
-
+                
                 # Gambar dummy
                 if dummy_path and os.path.exists(dummy_path):
                     c.drawImage(dummy_path, 290, y-100, width=100, height=100)
-
+                    
             except Exception as e:
                 print(f"Error adding images to PDF: {e}")
 
             c.save()
-
+            
             # Cetak otomatis (opsional)
             self.print_pdf(filepath)
-
+            
             messagebox.showinfo("Sukses", f"SPK berhasil disimpan dan PDF telah dibuat:\n{filepath}")
-
+            
         except Exception as e:
             messagebox.showerror("Gagal Buat PDF", f"Gagal membuat file PDF:\n{e}")
 
@@ -372,7 +338,7 @@ class SPKInputFrame(tk.Frame):
                 subprocess.run(["lp", filepath])
         except Exception as e:
             print(f"Gagal mencetak PDF: {e}")
-
+            
     def generate_barcode_image(self, data):
         """Generate QR Code image"""
         import qrcode
@@ -385,164 +351,75 @@ class SPKInputFrame(tk.Frame):
         qr.add_data(data)
         qr.make(fit=True)
         return qr.make_image(fill_color="black", back_color="white")
-
+    
     def go_dashboard(self):
         self.master.switch_frame(__import__('ui_dashboard').DashboardFrame)
 
     def build_estimasi_section(self):
         separator = ttk.Separator(self.container, orient="horizontal")
-        separator.pack(fill="x", pady=15)
+        separator.pack(fill="x", pady=10)
 
-        tk.Label(self.container, text="Estimasi Tahapan Produksi", font=("Arial", 16, "bold"), padx=10, pady=5).pack(pady=(10, 5), fill="x")
+        tk.Label(self.container, text="Estimasi Tahapan Produksi", font=("Arial", 14, "bold")).pack(pady=(10, 5))
 
         # Frame Tambah Tahapan
-        tambah_frame = tk.Frame(self.container, bg="#f9f9f9", relief="solid", borderwidth=1)
-        tambah_frame.pack(pady=15, padx=20, fill="x", ipady=10)
+        tambah_frame = tk.Frame(self.container)
+        tambah_frame.pack(pady=5)
 
         self.tahapan_options = [
             "DESAIN", "ACC DESAIN", "DUMMY", "CTP", "POTONG BAHAN", "CETAK",
             "POND", "FORMING", "LAMINATING", "PACKING", "PENGIRIMAN", "DITERIMA COSTUMER"
         ]
 
-        tk.Label(tambah_frame, text="Tahapan:", font=("Arial", 11, "bold"), bg="#f9f9f9").grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.selected_tahapan = ttk.Combobox(tambah_frame, values=self.tahapan_options, state="readonly", width=18)
-        self.selected_tahapan.grid(row=0, column=1, padx=10, pady=5)
+        tk.Label(tambah_frame, text="Tahapan:").grid(row=0, column=0)
+        self.selected_tahapan = ttk.Combobox(tambah_frame, values=self.tahapan_options, state="readonly")
+        self.selected_tahapan.grid(row=0, column=1, padx=5)
 
-        tk.Label(tambah_frame, text="Mulai (tgl & jam):", font=("Arial", 11, "bold"), bg="#f9f9f9").grid(row=0, column=2, padx=10, pady=5, sticky="w")
-        self.mulai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly")
-        self.mulai_tanggal.grid(row=0, column=3, padx=10, pady=5)
-        self.mulai_jam = tk.Entry(tambah_frame, width=7)
+        tk.Label(tambah_frame, text="Mulai (tgl & jam):").grid(row=0, column=2)
+        self.mulai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID")
+        self.mulai_tanggal.grid(row=0, column=3)
+        self.mulai_jam = tk.Entry(tambah_frame, width=5)
         self.mulai_jam.insert(0, "08:00")
-        self.mulai_jam.grid(row=0, column=4, padx=10, pady=5)
+        self.mulai_jam.grid(row=0, column=4, padx=(0, 5))
 
-        tk.Label(tambah_frame, text="Selesai (tgl & jam):", font=("Arial", 11, "bold"), bg="#f9f9f9").grid(row=0, column=5, padx=10, pady=5, sticky="w")
-        self.selesai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly")
-        self.selesai_tanggal.grid(row=0, column=6, padx=10, pady=5)
-        self.selesai_jam = tk.Entry(tambah_frame, width=7)
+        tk.Label(tambah_frame, text="Selesai (tgl & jam):").grid(row=0, column=5)
+        self.selesai_tanggal = DateEntry(tambah_frame, width=10, date_pattern="yyyy-mm-dd", locale="id_ID")
+        self.selesai_tanggal.grid(row=0, column=6)
+        self.selesai_jam = tk.Entry(tambah_frame, width=5)
         self.selesai_jam.insert(0, "17:00")
-        self.selesai_jam.grid(row=0, column=7, padx=10, pady=5)
+        self.selesai_jam.grid(row=0, column=7, padx=(0, 5))
 
-        # Tombol "Tambah" dengan desain lebih menarik
-        add_button = tk.Button(tambah_frame, text="Tambah", command=self.tambah_tahapan, bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), relief="flat")
-        add_button.grid(row=0, column=8, padx=10, pady=5)
-        add_button.bind("<Enter>", lambda e: add_button.config(bg="#45a049"))  # Hover effect
-        add_button.bind("<Leave>", lambda e: add_button.config(bg="#4CAF50"))  # Hover effect
+        tk.Button(tambah_frame, text="Tambah", command=self.tambah_tahapan).grid(row=0, column=8, padx=5)
 
         # Tabel Estimasi
-        self.estimasi_table = ttk.Treeview(
-            self.container, 
-            columns=("Tahap", "Mulai", "Selesai", "Aksi"), 
-            show="headings", 
-            height=8
-        )
-        self.estimasi_table.heading("Tahap", text="Tahapan", anchor="center")
-        # sorting tabel estimasi
-        self.estimasi_table.heading(
-            "Mulai", 
-            text="Mulai", 
-            anchor="center", 
-            command=self.sort_estimasi_table
-            )
-        self.estimasi_table.heading("Selesai", text="Selesai", anchor="center")
-        self.estimasi_table.heading("Aksi", text="Aksi", anchor="center")
+        self.estimasi_table = ttk.Treeview(self.container, columns=("Tahap", "Mulai", "Selesai", "Aksi"), show="headings")
+        self.estimasi_table.heading("Tahap", text="Tahapan")
+        self.estimasi_table.heading("Mulai", text="Mulai")
+        self.estimasi_table.heading("Selesai", text="Selesai")
+        self.estimasi_table.heading("Aksi", text="Aksi")
 
-        # Lebar kolom
-        self.estimasi_table.column("Tahap", width=160, anchor="center")
-        self.estimasi_table.column("Mulai", width=160, anchor="center")
-        self.estimasi_table.column("Selesai", width=160, anchor="center")
-        self.estimasi_table.column("Aksi", width=80, anchor="center")
+        self.estimasi_table.column("Tahap", width=120)
+        self.estimasi_table.column("Mulai", width=150)
+        self.estimasi_table.column("Selesai", width=150)
+        self.estimasi_table.column("Aksi", width=80)
 
-        self.estimasi_table.pack(pady=15, padx=20)
-        self.estimasi_rows = {}
-
-        # Menambahkan style untuk tabel
-        self.estimasi_table.tag_configure('oddrow', background="#f9f9f9", font=("Arial", 9))
-        self.estimasi_table.tag_configure('evenrow', background="#eaeaea", font=("Arial", 9))
-
-        self.estimasi_table.bind("<Button-1>", self.hapus_row_tahapan)
-    def parse_datetime(self, datetime_str):
-        try:
-            return datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
-        except ValueError:
-            return None
-
-    def validate_schedule(self, new_start, new_end):
-        # Check all existing schedules
-        for item in self.estimasi_table.get_children():
-            start_str = self.estimasi_table.item(item, "values")[1]
-            end_str = self.estimasi_table.item(item, "values")[2]
-            existing_start = self.parse_datetime(start_str)
-            existing_end = self.parse_datetime(end_str)
-
-            if (new_start < existing_end) and (new_end > existing_start):
-                return False, "Bentrok dengan jadwal yang sudah ada!"
-        return True, ""
-
-    def find_insert_position(self, new_start):
-        children = self.estimasi_table.get_children()
-        for pos, child in enumerate(children):
-            child_start_str = self.estimasi_table.item(child, "values")[1]
-            child_start = self.parse_datetime(child_start_str)
-            if new_start < child_start:
-                return pos
-        return "end"
-
-    def sort_estimasi_table(self):
-        items = [(self.estimasi_table.item(item, "values"), item) 
-                for item in self.estimasi_table.get_children()]
-
-        items.sort(key=lambda x: datetime.strptime(x[0][1], "%Y-%m-%d %H:%M"))
-
-        for index, (_, item) in enumerate(items):
-            self.estimasi_table.move(item, "", index)
+        self.estimasi_table.pack(pady=10)
+        self.estimasi_rows = {}  # simpan tombol hapus
 
     def tambah_tahapan(self):
         tahap = self.selected_tahapan.get()
         mulai = f"{self.mulai_tanggal.get_date().strftime('%Y-%m-%d')} {self.mulai_jam.get()}"
         selesai = f"{self.selesai_tanggal.get_date().strftime('%Y-%m-%d')} {self.selesai_jam.get()}"
 
-        # Validasi input
         if not tahap:
-            messagebox.showwarning("Kesalahan Input", "Pilih tahapan terlebih dahulu!")
+            messagebox.showwarning("Input Kosong", "Pilih tahapan terlebih dahulu.")
             return
 
-        # Parse waktu
-        try:
-            new_start = datetime.strptime(mulai, "%Y-%m-%d %H:%M")
-            new_end = datetime.strptime(selesai, "%Y-%m-%d %H:%M")
-        except ValueError:
-            messagebox.showwarning(
-                "Format Salah", "Format waktu tidak valid! Gunakan HH:MM"
-            )
-            return
+        # Tambah ke tabel
+        row_id = self.estimasi_table.insert("", "end", values=(tahap, mulai, selesai, "❌"))
 
-        # Validasi waktu
-        if new_start >= new_end:
-            messagebox.showwarning(
-                "Kesalahan Input", "Waktu mulai harus sebelum waktu selesai!"
-            )
-            return
-
-        # Validasi bentrok jadwal
-        valid, msg = self.validate_schedule(new_start, new_end)
-        if not valid:
-            messagebox.showerror("Bentrok Jadwal", msg)
-            return
-
-        # Cari posisi insert
-        insert_pos = self.find_insert_position(new_start)
-
-        # Tambahkan ke treeview
-        row_id = self.estimasi_table.insert(
-            "", insert_pos, values=(tahap, mulai, selesai, "❌")
-        )
-
-        # Update data storage
+        # Simpan referensi tombol hapus
         self.estimasi_rows[row_id] = (tahap, mulai, selesai)
-
-        # Update tampilan
-        row_tag = "oddrow" if len(self.estimasi_rows) % 2 == 0 else "evenrow"
-        self.estimasi_table.item(row_id, tags=row_tag)
+        self.estimasi_table.bind("<Button-1>", self.hapus_row_tahapan)
 
     def hapus_row_tahapan(self, event):
         region = self.estimasi_table.identify("region", event.x, event.y)
