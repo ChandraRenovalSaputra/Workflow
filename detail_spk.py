@@ -1,5 +1,7 @@
+import sqlite3
 from tkinter import *
 from tkinter import messagebox
+from tkinter import ttk
 from db import get_spk_details, update_keterangan_tahapan
 from PIL import Image, ImageTk
 import io
@@ -121,56 +123,74 @@ class DetailSPKFrame(Frame):
 
         # ===== WORKFLOW/Tahapan Produksi =====
         Label(self.scrollable_frame, text="WORKFLOW PRODUKSI", 
-             font=('Arial', 14, 'bold'), bg='white').pack(pady=10)
-        
+            font=('Arial', 14, 'bold'), bg='white').pack(pady=10)
+
         # Frame untuk tabel workflow
         workflow_frame = Frame(self.scrollable_frame, bg='white')
         workflow_frame.pack(pady=10, padx=20, fill=BOTH)
-        
+
         # Header tabel
-        headers = ["Tahap", "Estimasi", "Mulai", "Selesai", "Status", "Keterangan"]
+        headers = ["Tahap", "Mulai", "Selesai", "Status", "Keterangan"]
         for col, header in enumerate(headers):
             Label(workflow_frame, text=header, font=('Arial', 10, 'bold'), 
-                 bg='#f0f0f0', relief=RAISED, padx=5, pady=5, width=15).grid(row=0, column=col, sticky='nsew')
-        
+                bg='#f0f0f0', relief=RAISED, padx=5, pady=5, width=15).grid(row=0, column=col, sticky='nsew')
+
+        # Get scan data from spk_tracking
+        conn = sqlite3.connect("workflow.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                tahapan,
+                MAX(scan_mulai) as mulai,
+                MAX(scan_selesai) as selesai
+            FROM spk_tracking 
+            WHERE spk_id = ?
+            GROUP BY tahapan
+        """, (self.spk_id,))
+        scan_data = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
+        conn.close()
+
         # Isi tabel
         if tahapan_data:
             self.keterangan_vars = []  # Untuk menyimpan StringVar keterangan
             
-            for row, (tahap, mulai, selesai, keterangan) in enumerate(tahapan_data, start=1):
-                # Tentukan status
-                status, bg_color = self.tentukan_status(mulai, selesai)
+            for row, (tahap, estimasi_mulai, estimasi_selesai, keterangan) in enumerate(tahapan_data, start=1):
+                # Get actual scan times
+                mulai_scan, selesai_scan = scan_data.get(tahap, (None, None))
+                
+                # Determine status
+                if selesai_scan:
+                    status = "SELESAI"
+                    bg_color = "#28a745"  # Green
+                elif mulai_scan:
+                    status = "SEDANG DIKERJAKAN"
+                    bg_color = "#007bff"  # Blue
+                else:
+                    status = "BELUM"
+                    bg_color = "#6c757d"  # Gray
                 
                 # Kolom 1: Tahap
                 Label(workflow_frame, text=tahap, bg='white', 
-                     relief=GROOVE, padx=5, pady=5).grid(row=row, column=0, sticky='nsew')
+                    relief=GROOVE, padx=5, pady=5).grid(row=row, column=0, sticky='nsew')
                 
-                # Kolom 2: Estimasi
-                estimasi = f"{mulai[:10]} - {selesai[:10]}" if selesai else "-"
-                Label(workflow_frame, text=estimasi, bg='white', 
-                     relief=GROOVE, padx=5, pady=5).grid(row=row, column=1, sticky='nsew')
+                # Kolom 2: Mulai (from scan data)
+                Label(workflow_frame, text=mulai_scan.split(' ')[0] if mulai_scan else "-", 
+                    bg='white', relief=GROOVE, padx=5, pady=5).grid(row=row, column=1, sticky='nsew')
                 
-                # Kolom 3 & 4: Waktu Mulai & Selesai
-                Label(workflow_frame, text=mulai if mulai else "-", bg='white', 
-                     relief=GROOVE, padx=5, pady=5).grid(row=row, column=2, sticky='nsew')
-                Label(workflow_frame, text=selesai if selesai else "-", bg='white', 
-                     relief=GROOVE, padx=5, pady=5).grid(row=row, column=3, sticky='nsew')
+                # Kolom 3: Selesai (from scan data)
+                Label(workflow_frame, text=selesai_scan.split(' ')[0] if selesai_scan else "-", 
+                    bg='white', relief=GROOVE, padx=5, pady=5).grid(row=row, column=2, sticky='nsew')
                 
-                # Kolom 5: Status
+                # Kolom 4: Status
                 Label(workflow_frame, text=status, bg=bg_color, fg='white',
-                     relief=GROOVE, padx=5, pady=5).grid(row=row, column=4, sticky='nsew')
+                    relief=GROOVE, padx=5, pady=5).grid(row=row, column=3, sticky='nsew')
                 
-                # Kolom 6: Keterangan
+                # Kolom 5: Keterangan
                 keterangan_var = StringVar(value=keterangan if keterangan else "")
                 self.keterangan_vars.append((tahap, keterangan_var))
                 entry = Entry(workflow_frame, textvariable=keterangan_var, 
                             relief=GROOVE)
-                entry.grid(row=row, column=5, sticky='nsew')
-                
-                # Jika status "TERLAMBAT", set wajib isi keterangan
-                if status == "TERLAMBAT" and not keterangan:
-                    keterangan_var.set("Harap isi alasan keterlambatan")
-                    entry.config(bg="#FFF3CD")  # Warna kuning untuk highlight
+                entry.grid(row=row, column=4, sticky='nsew')
         
         # Tombol Simpan Keterangan
         Button(self.scrollable_frame, text="Simpan Keterangan", 
@@ -246,3 +266,39 @@ class DetailSPKFrame(Frame):
     def kembali_ke_jadwal(self):
         from lihat_jadwal_frame import LihatJadwalFrame
         self.controller.switch_frame(LihatJadwalFrame)
+
+    def add_tracking_section(self):
+        tracking_frame = Frame(self)
+        tracking_frame.pack(pady=10)
+        
+        Label(tracking_frame, text="Riwayat Tracking", font=('Arial', 14)).pack()
+        
+        # Tabel riwayat scan
+        columns = ("Tahap", "Mulai", "Selesai", "Durasi", "Operator")
+        self.tracking_tree = ttk.Treeview(tracking_frame, columns=columns, show="headings")
+        for col in columns:
+            self.tracking_tree.heading(col, text=col)
+        self.tracking_tree.pack()
+        
+        self.load_tracking_data()
+    
+    def load_tracking_data(self):
+        conn = sqlite3.connect("workflow.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT tahapan, scan_mulai, scan_selesai, operator 
+            FROM spk_tracking 
+            WHERE spk_id=?
+            ORDER BY scan_mulai
+        """, (self.spk_id,))
+        
+        for row in cursor.fetchall():
+            durasi = "Sedang berjalan"
+            if row[2]:  # Jika ada waktu selesai
+                start = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
+                end = datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S")
+                durasi = f"{(end-start).total_seconds()/60:.1f} menit"
+            
+            self.tracking_tree.insert("", "end", values=(row[0], row[1], row[2] or "-", durasi, row[3]))
+        
+        conn.close()

@@ -4,6 +4,8 @@ from ui_login import LoginFrame
 from db import create_tables, create_spk_tables  
 create_tables()
 create_spk_tables()
+from db import create_tables, fix_datetime_format
+
 
 class App(tk.Tk):
     def __init__(self):
@@ -33,7 +35,11 @@ class App(tk.Tk):
     def show_preview_frame(self, spk_id):
         from spk_preview_frame import SPKPreviewFrame
         self.switch_frame(lambda parent, controller: SPKPreviewFrame(parent, controller, spk_id))
+    
 
 if __name__ == "__main__":
+    create_tables()  # Buat tabel jika belum ada
+    fix_datetime_format()  # Perbaiki format waktu
+    
     app = App()
     app.mainloop()

@@ -1,4 +1,5 @@
 # db.py
+from datetime import datetime
 import sqlite3
 import hashlib
 import os
@@ -56,90 +57,49 @@ def get_jadwal_pekerjaan():
     cursor = conn.cursor()
 
     query = """
-    WITH current_stages AS (
+    WITH latest_tracking AS (
         SELECT 
+            spk_id,
+            tahapan,
+            MAX(scan_mulai) as last_scan_mulai,
+            MAX(scan_selesai) as last_scan_selesai,
+            operator
+        FROM spk_tracking
+        GROUP BY spk_id, tahapan
+    ),
+    current_stages AS (
+        SELECT
             t.spk_id,
             t.nama_tahapan,
-            t.mulai,
-            t.selesai,
-            s.tanggal_kirim,
-            s.nama_artikel,
-            s.no_po,
-            s.id,
-            -- Menentukan tahap yang sedang berjalan (current stage)
-            ROW_NUMBER() OVER (
-                PARTITION BY t.spk_id 
-                ORDER BY 
-                    CASE 
-                        WHEN date(t.mulai) <= date('now') AND date(t.selesai) >= date('now') THEN 0  -- Tahap sedang berjalan
-                        WHEN date(t.mulai) > date('now') THEN 1  -- Tahap belum dimulai
-                        ELSE 2  -- Tahap sudah selesai
-                    END,
-                    date(t.mulai) ASC
-            ) as priority
+            lt.last_scan_mulai as mulai,
+            lt.last_scan_selesai as selesai,
+            t.selesai as target_selesai,  -- Kolom target dari spk_tahapan
+            lt.operator,
+            ROW_NUMBER() OVER (PARTITION BY t.spk_id ORDER BY 
+                CASE 
+                    WHEN lt.last_scan_selesai IS NULL AND lt.last_scan_mulai IS NOT NULL THEN 0
+                    WHEN lt.last_scan_mulai IS NULL THEN 1
+                    ELSE 2
+                END) as stage_priority
         FROM spk_tahapan t
-        JOIN spk s ON t.spk_id = s.id
+        LEFT JOIN latest_tracking lt ON t.spk_id = lt.spk_id AND t.nama_tahapan = lt.tahapan
     )
-    SELECT 
-        nama_artikel AS Nama_Pekerjaan,
-        id AS ID,  
-        no_po AS PO,
-        nama_tahapan AS Tahap,
-        mulai AS Mulai,
-        selesai AS Selesai,
-        tanggal_kirim AS Deadline
-    FROM current_stages
-    WHERE priority = 1;  -- Hanya ambil yang prioritas tertinggi (current stage)
+    SELECT
+        s.nama_artikel,
+        s.id as spk_id,
+        s.no_po,
+        cs.nama_tahapan,
+        cs.mulai,
+        cs.selesai,
+        cs.target_selesai as target,  -- Diubah dari 'deadline' menjadi 'target'
+        cs.operator
+    FROM spk s
+    JOIN current_stages cs ON s.id = cs.spk_id AND cs.stage_priority = 1
+    WHERE cs.selesai IS NULL
+    ORDER BY cs.target_selesai ASC
     """
-
+    
     cursor.execute(query)
-    rows = cursor.fetchall()
-    conn.close()
-    return rows
-
-def search_jadwal(keyword):
-    conn = get_workflow_conn()
-    cursor = conn.cursor()
-    query = """
-    WITH current_stages AS (
-        SELECT 
-            t.spk_id,
-            t.nama_tahapan,
-            t.mulai,
-            t.selesai,
-            s.tanggal_kirim,
-            s.nama_artikel,
-            s.no_po,
-            s.id,
-            ROW_NUMBER() OVER (
-                PARTITION BY t.spk_id 
-                ORDER BY 
-                    CASE 
-                        WHEN date(t.mulai) <= date('now') AND date(t.selesai) >= date('now') THEN 0
-                        WHEN date(t.mulai) > date('now') THEN 1
-                        ELSE 2
-                    END,
-                    date(t.mulai) ASC
-            ) as priority
-        FROM spk_tahapan t
-        JOIN spk s ON t.spk_id = s.id
-        WHERE 
-            s.nama_artikel LIKE ? OR 
-            s.id LIKE ? OR 
-            s.no_po LIKE ?
-    )
-    SELECT 
-        nama_artikel AS Nama_Pekerjaan,
-        id AS ID,  
-        no_po AS PO,
-        nama_tahapan AS Tahap,
-        mulai AS Mulai,
-        selesai AS Selesai,
-        tanggal_kirim AS Deadline
-    FROM current_stages
-    WHERE priority = 1;
-    """
-    cursor.execute(query, (f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
     rows = cursor.fetchall()
     conn.close()
     return rows
@@ -148,17 +108,31 @@ def get_spk_details(spk_id):
     conn = get_workflow_conn()
     cursor = conn.cursor()
 
+    # Ambil data SPK
     cursor.execute("SELECT * FROM spk WHERE id = ?", (spk_id,))
     spk_data = cursor.fetchone()
 
-    cursor.execute('''
-        SELECT nama_tahapan, mulai, selesai, keterangan 
-        FROM spk_tahapan 
-        WHERE spk_id = ?
-        ORDER BY date(mulai) ASC
-    ''', (spk_id,))
+    # Ambil data tahapan dengan status
+    cursor.execute("""
+        SELECT 
+            t.nama_tahapan,
+            (SELECT MAX(scan_mulai) FROM spk_tracking 
+             WHERE spk_id = t.spk_id AND tahapan = t.nama_tahapan) as mulai,
+            (SELECT MAX(scan_selesai) FROM spk_tracking 
+             WHERE spk_id = t.spk_id AND tahapan = t.nama_tahapan) as selesai,
+            CASE 
+                WHEN (SELECT MAX(scan_selesai) FROM spk_tracking 
+                     WHERE spk_id = t.spk_id AND tahapan = t.nama_tahapan) IS NOT NULL THEN 'Selesai'
+                WHEN (SELECT MAX(scan_mulai) FROM spk_tracking 
+                     WHERE spk_id = t.spk_id AND tahapan = t.nama_tahapan) IS NOT NULL THEN 'Sedang Dikerjakan'
+                ELSE 'Belum'
+            END as status
+        FROM spk_tahapan t
+        WHERE t.spk_id = ?
+        ORDER BY t.id ASC
+    """, (spk_id,))
+    
     tahapan_data = cursor.fetchall()
-
     conn.close()
     return spk_data, tahapan_data
 
@@ -200,6 +174,16 @@ def create_spk_tables():
         FOREIGN KEY(spk_id) REFERENCES spk(id)
     )
     """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS spk_tracking (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            spk_id INTEGER NOT NULL,
+            tahapan TEXT NOT NULL,
+            scan_mulai TEXT,
+            scan_selesai TEXT,
+            FOREIGN KEY(spk_id) REFERENCES spk(id)
+        )""")
     conn.commit()
     conn.close()
 
@@ -219,3 +203,75 @@ def update_keterangan_tahapan(spk_id, tahap, keterangan):
         return False
     finally:
         conn.close()
+
+def fix_datetime_format():
+    """Function to standardize datetime formats in the database"""
+    conn = get_workflow_conn()
+    cursor = conn.cursor()
+    
+    try:
+        print("Memperbaiki format waktu di database...")
+        
+        # Perbaiki format di spk_tracking
+        cursor.execute("""
+            UPDATE spk_tracking 
+            SET scan_mulai = scan_mulai || ':00' 
+            WHERE scan_mulai LIKE '%-% %H:%M' AND scan_mulai NOT LIKE '%:%:%'
+        """)
+        
+        cursor.execute("""
+            UPDATE spk_tracking 
+            SET scan_selesai = scan_selesai || ':00' 
+            WHERE scan_selesai LIKE '%-% %H:%M' AND scan_selesai NOT LIKE '%:%:%'
+        """)
+        
+        # Perbaiki format di spk_tahapan
+        cursor.execute("""
+            UPDATE spk_tahapan 
+            SET mulai = mulai || ':00' 
+            WHERE mulai LIKE '%-% %H:%M' AND mulai NOT LIKE '%:%:%'
+        """)
+        
+        cursor.execute("""
+            UPDATE spk_tahapan 
+            SET selesai = selesai || ':00' 
+            WHERE selesai LIKE '%-% %H:%M' AND selesai NOT LIKE '%:%:%'
+        """)
+        
+        conn.commit()
+        print("Format waktu di database telah distandardisasi")
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Gagal memperbaiki format waktu: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_active_tahapan(spk_id):
+    """Mendapatkan tahapan aktif berikutnya untuk SPK"""
+    conn = get_workflow_conn()
+    cursor = conn.cursor()
+    
+    # 1. Cek tahapan yang sudah mulai tapi belum selesai
+    cursor.execute("""
+        SELECT nama_tahapan FROM spk_tahapan 
+        WHERE spk_id = ? AND mulai IS NOT NULL AND selesai IS NULL
+        LIMIT 1
+    """, (spk_id,))
+    tahap_berjalan = cursor.fetchone()
+    
+    if tahap_berjalan:
+        return tahap_berjalan[0]  # Kembalikan tahapan yang sedang berjalan
+    
+    # 2. Jika tidak ada, ambil tahapan berikutnya yang belum dimulai
+    cursor.execute("""
+        SELECT nama_tahapan FROM spk_tahapan 
+        WHERE spk_id = ? AND mulai IS NULL
+        ORDER BY id ASC
+        LIMIT 1
+    """, (spk_id,))
+    tahap_berikutnya = cursor.fetchone()
+    
+    conn.close()
+    return tahap_berikutnya[0] if tahap_berikutnya else None
