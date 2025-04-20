@@ -8,6 +8,17 @@ import io
 import qrcode
 from datetime import datetime
 from io import BytesIO
+from tkinter import ttk
+import tkinter as tk
+
+def center_window(root, width=1600, height=800):
+    """Menempatkan window di tengah layar"""
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+    root.geometry(f"{width}x{height}+{x}+{y}")  # Tentukan ukuran dan posisi
+    root.minsize(width, height)  # Ukuran minimal untuk window
 
 def show_spk_detail(controller, spk_id):
     """ Fungsi untuk beralih ke halaman DetailSPKFrame """
@@ -18,122 +29,107 @@ class DetailSPKFrame(Frame):
         super().__init__(parent)
         self.controller = controller
         self.spk_id = spk_id
-        self.configure(bg='white')
-        
-        # Scrollable Frame
-        canvas = Canvas(self, bg='white', highlightthickness=0)
-        scrollbar = Scrollbar(self, orient="vertical", command=canvas.yview)
-        self.scrollable_frame = Frame(canvas, bg='white')
-        
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
+        self.configure(bg='#f0f2f5')
+
+        # === HEADER ===
+        header = Frame(self, bg="#0078D7", height=60)
+        header.pack(side="top", fill="x")
+
+        title = Label(
+            header, text=f"🧾 Detail SPK - {spk_id}",
+            font=("Segoe UI", 18, "bold"), bg="#0078D7", fg="white"
         )
-        
-        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        title.pack(side="left", padx=20, pady=10)
 
-        # Header
-        Label(self.scrollable_frame, text=f"Detail SPK - {spk_id}", 
-              font=('Arial', 18, 'bold'), bg='blue', fg='white').pack(pady=10, fill=X)
+        # === SCROLLABLE ===
+        self.canvas = Canvas(self, bg="#f0f2f5", highlightthickness=0)
+        self.scrollbar = Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = Frame(self.canvas, bg="#f0f2f5")
+        self.scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        # Data Utama SPK
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+        self.bind_scroll_event()
+
+        # === DATA SPK ===
         spk_data, tahapan_data = get_spk_details(spk_id)
         if spk_data:
-            detail_text = (
-                f"ORDER SALES          : {spk_data[1]}\n"
-                f"NO PO                         : {spk_data[2]}\n"
-                f"COSTUMER               : {spk_data[3]}\n"
-                f"NAMA ARTIKEL       : {spk_data[4]}\n"
-                f"QTY                             : {spk_data[5]}\n"
-                f"TANGGAL KIRIM      : {spk_data[6]}\n"
-                f"JENIS BAHAN          : {spk_data[7]}\n"
-                f"QTY BAHAN            : {spk_data[8]}\n"
-                f"UKURAN CETAK       : {spk_data[9]}\n"
-                f"JUMLAH CETAK      : {spk_data[10]}\n"
-                f"INSHEET                   : {spk_data[11]}\n"
-                f"TOTAL CETAK         : {spk_data[12]}\n"
-                f"WARNA                     : {spk_data[13]}\n"
-                f"VARNISH                  : {spk_data[14]}\n"
-                f"FINISHING                : {spk_data[15]}"
-            )
-            Label(self.scrollable_frame, text=detail_text, bg='white', 
-                 font=('Arial', 12), justify="left").pack(pady=5, padx=20, anchor="w")
+            # Bungkus agar bisa center
+            wrapper = Frame(self.scrollable_frame, bg='#f0f2f5')
+            wrapper.pack(pady=20)
+
+            detail_card = Frame(wrapper, bg='white', bd=2, relief='groove')
+            detail_card.pack(padx=550)
+
+            Label(
+                detail_card, text="🗝️ INFORMASI SPK",
+                font=('Segoe UI', 18, 'bold'), bg='white', fg='#222'
+            ).grid(row=0, column=0, columnspan=3, sticky="w", padx=20, pady=(20, 10))
+
+            labels = [
+                ("ORDER SALES", spk_data[1]), ("NO PO", spk_data[2]),
+                ("CUSTOMER", spk_data[3]), ("NAMA ARTIKEL", spk_data[4]),
+                ("QTY", spk_data[5]), ("TANGGAL KIRIM", spk_data[6]),
+                ("JENIS BAHAN", spk_data[7]), ("QTY BAHAN", spk_data[8]),
+                ("UKURAN CETAK", spk_data[9]), ("JUMLAH CETAK", spk_data[10]),
+                ("INSHEET", spk_data[11]), ("TOTAL CETAK", spk_data[12]),
+                ("WARNA", spk_data[13]), ("VARNISH", spk_data[14]),
+                ("FINISHING", spk_data[15])
+            ]
+
+            for i, (label_text, value) in enumerate(labels, start=1):
+                Label(detail_card, text=label_text, font=('Segoe UI', 12, 'bold'), bg='white').grid(
+                    row=i, column=0, sticky='w', padx=(20, 5), pady=6)
+                Label(detail_card, text=":", font=('Segoe UI', 12), bg='white').grid(
+                    row=i, column=1, sticky='w', padx=5, pady=6)
+                Label(detail_card, text=value, font=('Segoe UI', 12), bg='white').grid(
+                    row=i, column=2, sticky='w', padx=(5, 20), pady=6)
+
+            # Atur lebar kolom supaya rapi
+            detail_card.grid_columnconfigure(0, minsize=150)
+            detail_card.grid_columnconfigure(2, minsize=550)
+
         else:
-            Label(self.scrollable_frame, text="❌ Data tidak ditemukan.", bg='white').pack()
+            Label(self.scrollable_frame, text="❌ Data tidak ditemukan.", bg='#f0f2f5').pack()
 
-        # ===== Gambar Desain, Barcode, dan Dummy =====
-        img_frame = Frame(self.scrollable_frame, bg='white')
-        img_frame.pack(pady=10)
 
-        # Gambar Desain
-        if spk_data and spk_data[16]:  # gambar_desain
-            try:
-                img_desain = Image.open(spk_data[16]) if isinstance(spk_data[16], str) else Image.open(io.BytesIO(spk_data[16]))
-                img_desain.thumbnail((200, 200))
-                self.photo_desain = ImageTk.PhotoImage(img_desain)
-                desain_frame = Frame(img_frame, bg='white')
-                desain_frame.grid(row=0, column=0, padx=10)
-                Label(desain_frame, image=self.photo_desain, bg='white').pack()
-                Label(desain_frame, text="Desain", bg='white', font=('Arial', 10, 'bold')).pack()
-            except Exception as e:
-                print(f"Error loading design image: {e}")
-                Label(img_frame, text="Gambar desain tidak tersedia", bg='white').grid(row=0, column=0)
+        # === GAMBAR FRAME ===
+        if spk_data:
+            img_container = Frame(self.scrollable_frame, bg='#f0f2f5')
+            img_container.pack(padx=30, pady=10, fill='x')
 
-        # Barcode
-        try:
-            if spk_data and len(spk_data) > 18 and spk_data[19]:  # barcode_image
-                # Jika barcode sudah ada di database
-                barcode_img = Image.open(io.BytesIO(spk_data[19]))
-                barcode_img.thumbnail((200, 200))
-                self.photo_barcode = ImageTk.PhotoImage(barcode_img)
-                barcode_text = "Barcode SPK"
-            else:
-                # Generate baru jika tidak ada di database
-                barcode_img = self.generate_barcode_image()
-                self.photo_barcode = ImageTk.PhotoImage(barcode_img)
-                barcode_text = "Barcode SPK (Generated)"
-            
-            barcode_frame = Frame(img_frame, bg='white')
-            barcode_frame.grid(row=0, column=1, padx=10)
-            Label(barcode_frame, image=self.photo_barcode, bg='white').pack()
-            Label(barcode_frame, text=barcode_text, bg='white', font=('Arial', 10, 'bold')).pack()
-        except Exception as e:
-            print(f"Error loading/generating barcode: {e}")
-            Label(img_frame, text="Gagal memuat barcode", bg='white').grid(row=0, column=1)
+            img_frame = Frame(img_container, bg='#f0f2f5')
+            img_frame.pack(anchor="center")
 
-        # Gambar Dummy
-        if spk_data and spk_data[17]:  # gambar_dummy
-            try:
-                img_dummy = Image.open(spk_data[17]) if isinstance(spk_data[17], str) else Image.open(io.BytesIO(spk_data[17]))
-                img_dummy.thumbnail((200, 200))
-                self.photo_dummy = ImageTk.PhotoImage(img_dummy)
-                dummy_frame = Frame(img_frame, bg='white')
-                dummy_frame.grid(row=0, column=2, padx=10)
-                Label(dummy_frame, image=self.photo_dummy, bg='white').pack()
-                Label(dummy_frame, text="Dummy", bg='white', font=('Arial', 10, 'bold')).pack()
-            except Exception as e:
-                print(f"Error loading dummy image: {e}")
-                Label(img_frame, text="Gambar dummy tidak tersedia", bg='white').grid(row=0, column=2)
 
-        # ===== WORKFLOW/Tahapan Produksi =====
-        Label(self.scrollable_frame, text="WORKFLOW PRODUKSI", 
-            font=('Arial', 14, 'bold'), bg='white').pack(pady=10)
+            # Desain
+            self.add_image_column(img_frame, 0, spk_data[16], "Desain")
+            # Barcode
+            barcode_img = self.generate_barcode_image() if not (len(spk_data) > 18 and spk_data[19]) else Image.open(io.BytesIO(spk_data[19]))
+            self.add_image_column(img_frame, 1, barcode_img, "Barcode")
+            # Dummy
+            self.add_image_column(img_frame, 2, spk_data[17], "Dummy")
 
-        # Frame untuk tabel workflow
-        workflow_frame = Frame(self.scrollable_frame, bg='white')
-        workflow_frame.pack(pady=10, padx=20, fill=BOTH)
+        # === WORKFLOW PRODUKSI ===
+        Label(
+            self.scrollable_frame, text="📋 WORKFLOW PRODUKSI",
+            font=('Segoe UI', 18, 'bold'), bg='#f0f2f5', fg='#2c3e50'
+        ).pack(pady=(20, 10))
 
-        # Header tabel
-        headers = ["Tahap", "Mulai", "Selesai", "Status", "Keterangan"]
+
+
+        workflow_frame = Frame(self.scrollable_frame, bg='white', bd=1, relief='solid')
+        workflow_frame.pack(padx=30, fill='both')
+
+        headers = ["Tahap", "Estimasi", "Mulai", "Selesai", "Status", "Keterangan"]
+        # HEADER
         for col, header in enumerate(headers):
-            Label(workflow_frame, text=header, font=('Arial', 10, 'bold'), 
-                bg='#f0f0f0', relief=RAISED, padx=5, pady=5, width=15).grid(row=0, column=col, sticky='nsew')
+            Label(
+                workflow_frame, text=header, font=('Segoe UI', 12, 'bold'),
+                bg='#0056b3', fg='white', padx=25, pady=12
+            ).grid(row=0, column=col, sticky='nsew')
 
         # Get scan data from spk_tracking
         conn = sqlite3.connect("workflow.db")
@@ -150,57 +146,63 @@ class DetailSPKFrame(Frame):
         scan_data = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
         conn.close()
 
-        # Isi tabel
+        for i in range(len(headers)):
+            workflow_frame.grid_columnconfigure(i, weight=1)
+
+        # ISI
         if tahapan_data:
-            self.keterangan_vars = []  # Untuk menyimpan StringVar keterangan
             
-            for row, (tahap, estimasi_mulai, estimasi_selesai, keterangan) in enumerate(tahapan_data, start=1):
-                # Get actual scan times
-                mulai_scan, selesai_scan = scan_data.get(tahap, (None, None))
-                
-                # Determine status
-                if selesai_scan:
-                    status = "SELESAI"
-                    bg_color = "#28a745"  # Green
-                elif mulai_scan:
-                    status = "SEDANG DIKERJAKAN"
-                    bg_color = "#007bff"  # Blue
-                else:
-                    status = "BELUM"
-                    bg_color = "#6c757d"  # Gray
-                
-                # Kolom 1: Tahap
-                Label(workflow_frame, text=tahap, bg='white', 
-                    relief=GROOVE, padx=5, pady=5).grid(row=row, column=0, sticky='nsew')
-                
-                # Kolom 2: Mulai (from scan data)
-                Label(workflow_frame, text=mulai_scan.split(' ')[0] if mulai_scan else "-", 
-                    bg='white', relief=GROOVE, padx=5, pady=5).grid(row=row, column=1, sticky='nsew')
-                
-                # Kolom 3: Selesai (from scan data)
-                Label(workflow_frame, text=selesai_scan.split(' ')[0] if selesai_scan else "-", 
-                    bg='white', relief=GROOVE, padx=5, pady=5).grid(row=row, column=2, sticky='nsew')
-                
-                # Kolom 4: Status
-                Label(workflow_frame, text=status, bg=bg_color, fg='white',
-                    relief=GROOVE, padx=5, pady=5).grid(row=row, column=3, sticky='nsew')
-                
-                # Kolom 5: Keterangan
+            self.keterangan_vars = []
+
+            for row, (tahap, mulai, selesai, keterangan) in enumerate(tahapan_data, start=1):
+                status, bg_color = self.tentukan_status(mulai, selesai)
+                estimasi = f"{mulai[:10]} - {selesai[:10]}" if selesai else "-"
+
+                base_font = ('Segoe UI', 12)
+                status_font = ('Segoe UI', 12, 'bold')
+
+                Label(workflow_frame, text=tahap, bg='white', font=base_font).grid(row=row, column=0, sticky='nsew', padx=5, pady=6)
+                Label(workflow_frame, text=estimasi, bg='white', font=base_font).grid(row=row, column=1, sticky='nsew', padx=5, pady=6)
+                Label(workflow_frame, text=mulai or "-", bg='white', font=base_font).grid(row=row, column=2, sticky='nsew', padx=5, pady=6)
+                Label(workflow_frame, text=selesai or "-", bg='white', font=base_font).grid(row=row, column=3, sticky='nsew', padx=5, pady=6)
+
+                Label(
+                    workflow_frame, text=status, bg=bg_color, fg='white',
+                    font=status_font, relief='ridge', bd=2
+                ).grid(row=row, column=4, sticky='nsew', padx=5, pady=6)
+
+                # Keterangan Entry
                 keterangan_var = StringVar(value=keterangan if keterangan else "")
                 self.keterangan_vars.append((tahap, keterangan_var))
-                entry = Entry(workflow_frame, textvariable=keterangan_var, 
-                            relief=GROOVE)
-                entry.grid(row=row, column=4, sticky='nsew')
-        
-        # Tombol Simpan Keterangan
-        Button(self.scrollable_frame, text="Simpan Keterangan", 
-              command=self.simpan_keterangan, bg='#28a745', fg='white',
-              font=('Arial', 10, 'bold')).pack(pady=10)
-        
-        # Tombol Kembali
-        Button(self.scrollable_frame, text="Kembali ke Jadwal", 
-              font=('Arial', 12, 'bold'), bg='#dc3545', fg='white', 
-              command=self.kembali_ke_jadwal).pack(pady=20)
+
+                entry_bg = "#ffffff"
+                if status == "TERLAMBAT" and not keterangan:
+                    keterangan_var.set("Harap isi alasan keterlambatan")
+                    entry_bg = "#ffeeba"  # kuning soft
+
+                entry = Entry(
+                    workflow_frame, textvariable=keterangan_var, font=base_font,
+                    bg=entry_bg, relief='solid', bd=1, highlightthickness=1, highlightbackground='#ccc'
+                )
+                entry.grid(row=row, column=5, sticky='nsew', padx=5, pady=6, ipady=6)
+
+
+        # === BUTTONS ===
+        button_frame = Frame(self.scrollable_frame, bg='#f0f2f5')
+        button_frame.pack(pady=30)
+
+        ttk.Style().configure("Green.TButton", font=('Segoe UI', 12, 'bold'), padding=10)
+        ttk.Button(button_frame, text="💾 Simpan Keterangan", command=self.simpan_keterangan, style="Green.TButton").pack(side="left", padx=10)
+        ttk.Button(button_frame, text="⏪ Kembali ke Jadwal", command=self.kembali_ke_jadwal, style="Green.TButton").pack(side="left", padx=10)
+
+    
+    def bind_scroll_event(self):
+        """Binding scroll agar bisa dipakai di Windows"""
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_mousewheel(self, event):
+        """Fungsi scroll mouse (untuk Windows)"""
+        self.canvas.yview_scroll(-1 * int(event.delta / 120), "units")
 
     def generate_barcode_image(self, size=(200, 200)):
         """Generate QR Code untuk SPK"""
@@ -302,3 +304,25 @@ class DetailSPKFrame(Frame):
             self.tracking_tree.insert("", "end", values=(row[0], row[1], row[2] or "-", durasi, row[3]))
         
         conn.close()
+    def add_image_column(self, parent, col, image_source, title):
+        try:
+            if isinstance(image_source, Image.Image):
+                img = image_source
+            elif isinstance(image_source, str):
+                img = Image.open(image_source)
+            elif image_source:
+                img = Image.open(io.BytesIO(image_source))
+            else:
+                return
+
+            img.thumbnail((200, 200))
+            photo = ImageTk.PhotoImage(img)
+            frame = Frame(parent, bg='white')
+            frame.grid(row=0, column=col, padx=15)
+
+            label_img = Label(frame, image=photo, bg='white')
+            label_img.image = photo
+            label_img.pack()
+            Label(frame, text=title, font=('Segoe UI', 10, 'bold'), bg='white').pack()
+        except Exception as e:
+            print(f"Error loading {title} image: {e}")
