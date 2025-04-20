@@ -2,24 +2,43 @@ import tkinter as tk
 from tkinter import ttk
 from ui_login import LoginFrame
 from db import create_tables, create_spk_tables  
+
 create_tables()
 create_spk_tables()
+
+def center_window(root, width=1600, height=800):
+    """Menempatkan window di tengah layar"""
+    # Ambil ukuran layar
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    
+    # Hitung posisi x dan y untuk menempatkan window di tengah
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+    
+    root.geometry(f"{width}x{height}+{x}+{y}")  # Tentukan ukuran dan posisi
+    root.minsize(width, height)  # Set ukuran minimal
+    root.configure(bg='white')  # Background putih jika diperlukan
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Sistem Workflow Percetakan")
-        self.geometry("1600x800")
+        
+        # Atur ukuran window dan posisikan di tengah layar
+        center_window(self, 1600, 800)
+        
         self.resizable(True, True)
-
+        
         create_tables()
-
-        self.state("zoomed") 
-
+        
+        self.state("zoomed")  # Untuk fullscreen pada awalnya
+        
         self._frame = None
         self.switch_frame(lambda parent, controller: LoginFrame(parent, controller))
 
     def switch_frame(self, frame_class, *args):
+        """Berpindah antar frame"""
         if self._frame is not None:
             self._frame.destroy()
             
@@ -31,8 +50,10 @@ class App(tk.Tk):
         self._frame.pack(fill="both", expand=True)
 
     def show_preview_frame(self, spk_id):
+        """Menampilkan preview SPK"""
         from spk_preview_frame import SPKPreviewFrame
         self.switch_frame(lambda parent, controller: SPKPreviewFrame(parent, controller, spk_id))
+        
 
 if __name__ == "__main__":
     app = App()

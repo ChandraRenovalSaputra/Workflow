@@ -347,62 +347,88 @@ class SPKInputFrame(tk.Frame):
             # Buat PDF
             c = canvas.Canvas(filepath, pagesize=A4)
             width, height = A4
+            margin_x, margin_y = 50, 50
+            y = height - margin_y
 
             # Header
-            y = height - 50
-            c.setFont("Helvetica-Bold", 16)
+            c.setFont("Helvetica-Bold", 18)
             c.drawCentredString(width / 2, y, "SURAT PERINTAH KERJA")
+            y -= 10
+            c.setLineWidth(1)
+            c.line(margin_x, y, width - margin_x, y)
+            y -= 30
 
-            # Informasi SPK
-            y -= 50
+            # SPK Info 2 kolom
             c.setFont("Helvetica", 10)
-            for line in [
-                f"ORDER SALES : {data.get('order_sales', '')}",
-                f"NO PO       : {data.get('no_po', '')}",
-                f"COSTUMER    : {data.get('costumer', '')}",
-                f"NAMA ARTIKEL: {data.get('nama_artikel', '')}",
-                f"QTY         : {data.get('qty', '')}",
-                f"TANGGAL KIRIM: {data.get('tanggal_kirim', '')}",
-                "",
-                f"JENIS BAHAN : {data.get('jenis_bahan', '')}",
-                f"QTY BAHAN   : {data.get('qty_bahan', '')}",
-                f"UKURAN CETAK: {data.get('ukuran_cetak', '')}",
-                f"JUMLAH CETAK: {data.get('jumlah_cetak', '')}",
-                f"INSHEET     : {data.get('insheet', '')}",
-                f"TOTAL CETAK : {data.get('total_cetak', '')}",
-                f"WARNA       : {data.get('warna', '')}",
-                f"VARNISH     : {data.get('varnish', '')}",
-                f"FINISHING   : {data.get('finishing', '')}",
-            ]:
-                c.drawString(50, y, line)
-                y -= 15
+            left_x = margin_x
+            right_x = width / 2 + 10
+            spacing = 15
+
+            info_kiri = [
+                ("ORDER SALES", data.get("order_sales", "")),
+                ("NO PO", data.get("no_po", "")),
+                ("CUSTOMER", data.get("costumer", "")),
+                ("NAMA ARTIKEL", data.get("nama_artikel", "")),
+                ("QTY", data.get("qty", "")),
+                ("TANGGAL KIRIM", data.get("tanggal_kirim", ""))
+            ]
+
+            info_kanan = [
+                ("JENIS BAHAN", data.get("jenis_bahan", "")),
+                ("QTY BAHAN", data.get("qty_bahan", "")),
+                ("UKURAN CETAK", data.get("ukuran_cetak", "")),
+                ("JUMLAH CETAK", data.get("jumlah_cetak", "")),
+                ("INSHEET", data.get("insheet", "")),
+                ("TOTAL CETAK", data.get("total_cetak", "")),
+                ("WARNA", data.get("warna", "")),
+                ("VARNISH", data.get("varnish", "")),
+                ("FINISHING", data.get("finishing", ""))
+            ]
+
+            for label, value in info_kiri:
+                c.drawString(left_x, y, f"{label:<15}: {value}")
+                y -= spacing
+
+            # Geser kanan dan mulai dari atas untuk kolom kanan
+            y2 = height - margin_y - 60
+            for label, value in info_kanan:
+                c.drawString(right_x, y2, f"{label:<15}: {value}")
+                y2 -= spacing
 
             # Gambar: desain, barcode, dummy
-            y -= 30
+            y_img = min(y, y2) - 40
             try:
-                from reportlab.lib.utils import ImageReader
-
                 # Generate barcode sementara
                 barcode_path = f"temp_barcode_{spk_id}.png"
                 qr = qrcode.make(f"SPK-{spk_id}")
                 qr.save(barcode_path)
 
-                # Gambar desain
+                # Lebar gambar tetap
+                img_width = 100
+                spacing_img = 120
+
+                img_x = margin_x
+                label_y = y_img - img_width - 12
+
                 if desain_path and os.path.exists(desain_path):
-                    c.drawImage(desain_path, 50, y-100, width=100, height=100)
+                    c.drawImage(desain_path, img_x, y_img - img_width, width=img_width, height=img_width)
+                    c.drawCentredString(img_x + img_width / 2, label_y, "Desain")
+                    img_x += spacing_img
 
-                # Gambar barcode
                 if os.path.exists(barcode_path):
-                    c.drawImage(barcode_path, 170, y-100, width=100, height=100)
-                    os.remove(barcode_path)  # Hapus file sementara
+                    c.drawImage(barcode_path, img_x, y_img - img_width, width=img_width, height=img_width)
+                    c.drawCentredString(img_x + img_width / 2, label_y, "Barcode")
+                    os.remove(barcode_path)
+                    img_x += spacing_img
 
-                # Gambar dummy
                 if dummy_path and os.path.exists(dummy_path):
-                    c.drawImage(dummy_path, 290, y-100, width=100, height=100)
+                    c.drawImage(dummy_path, img_x, y_img - img_width, width=img_width, height=img_width)
+                    c.drawCentredString(img_x + img_width / 2, label_y, "Dummy")
 
             except Exception as e:
                 print(f"Error adding images to PDF: {e}")
 
+            # Selesai
             c.save()
 
             # Cetak otomatis (opsional)
