@@ -5,7 +5,6 @@ from db import get_jadwal_pekerjaan, get_workflow_conn
 from detail_spk import show_spk_detail
 from datetime import datetime
 
-
 class LihatJadwalFrame(Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)

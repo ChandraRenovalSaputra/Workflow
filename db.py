@@ -108,31 +108,17 @@ def get_spk_details(spk_id):
     conn = get_workflow_conn()
     cursor = conn.cursor()
 
-    # Ambil data SPK
     cursor.execute("SELECT * FROM spk WHERE id = ?", (spk_id,))
     spk_data = cursor.fetchone()
 
-    # Ambil data tahapan dengan status
-    cursor.execute("""
-        SELECT 
-            t.nama_tahapan,
-            (SELECT MAX(scan_mulai) FROM spk_tracking 
-             WHERE spk_id = t.spk_id AND tahapan = t.nama_tahapan) as mulai,
-            (SELECT MAX(scan_selesai) FROM spk_tracking 
-             WHERE spk_id = t.spk_id AND tahapan = t.nama_tahapan) as selesai,
-            CASE 
-                WHEN (SELECT MAX(scan_selesai) FROM spk_tracking 
-                     WHERE spk_id = t.spk_id AND tahapan = t.nama_tahapan) IS NOT NULL THEN 'Selesai'
-                WHEN (SELECT MAX(scan_mulai) FROM spk_tracking 
-                     WHERE spk_id = t.spk_id AND tahapan = t.nama_tahapan) IS NOT NULL THEN 'Sedang Dikerjakan'
-                ELSE 'Belum'
-            END as status
-        FROM spk_tahapan t
-        WHERE t.spk_id = ?
-        ORDER BY t.id ASC
-    """, (spk_id,))
-    
+    cursor.execute('''
+        SELECT nama_tahapan, mulai, selesai, keterangan 
+        FROM spk_tahapan 
+        WHERE spk_id = ?
+        ORDER BY date(mulai) ASC
+    ''', (spk_id,))
     tahapan_data = cursor.fetchall()
+
     conn.close()
     return spk_data, tahapan_data
 
