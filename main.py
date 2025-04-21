@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from ui_login import LoginFrame
 from db import create_tables, create_spk_tables  
+# from db import alter_add_barcode_column
 
 create_tables()
 create_spk_tables()
@@ -65,5 +66,6 @@ class App(tk.Tk):
         
 
 if __name__ == "__main__":
+    # alter_add_barcode_column()
     app = App()
     app.mainloop()
