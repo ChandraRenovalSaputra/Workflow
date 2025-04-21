@@ -521,14 +521,14 @@ class SPKInputFrame(tk.Frame):
         self.selected_tahapan.grid(row=0, column=1, padx=12, pady=10)
 
         tk.Label(tambah_frame, text="Mulai (tgl & jam):", font=label_font, bg="#ffffff").grid(row=0, column=2, padx=12, pady=10, sticky="w")
-        self.mulai_tanggal = DateEntry(tambah_frame, width=12, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly", font=entry_font)
+        self.mulai_tanggal = DateEntry(tambah_frame, width=12, date_pattern="dd-mm-yyyy", locale="id_ID", state="readonly", font=entry_font)
         self.mulai_tanggal.grid(row=0, column=3, padx=5, pady=10)
         self.mulai_jam = tk.Entry(tambah_frame, width=8, font=entry_font)
         self.mulai_jam.insert(0, "08:00")
         self.mulai_jam.grid(row=0, column=4, padx=5, pady=10)
 
         tk.Label(tambah_frame, text="Selesai (tgl & jam):", font=label_font, bg="#ffffff").grid(row=0, column=5, padx=12, pady=10, sticky="w")
-        self.selesai_tanggal = DateEntry(tambah_frame, width=12, date_pattern="yyyy-mm-dd", locale="id_ID", state="readonly", font=entry_font)
+        self.selesai_tanggal = DateEntry(tambah_frame, width=12, date_pattern="dd-mm-yyyy", locale="id_ID", state="readonly", font=entry_font)
         self.selesai_tanggal.grid(row=0, column=6, padx=5, pady=10)
         self.selesai_jam = tk.Entry(tambah_frame, width=8, font=entry_font)
         self.selesai_jam.insert(0, "17:00")
@@ -558,7 +558,7 @@ class SPKInputFrame(tk.Frame):
 
         self.estimasi_table = ttk.Treeview(self.container, columns=("Tahap", "Mulai", "Selesai", "Aksi"), show="headings", height=8)
         self.estimasi_table.heading("Tahap", text="Tahapan", anchor="center")
-        self.estimasi_table.heading("Mulai", text="Mulai", anchor="center")
+        self.estimasi_table.heading("Mulai", text="Mulai", anchor="center", command=self.sort_estimasi_table)
         self.estimasi_table.heading("Selesai", text="Selesai", anchor="center")
         self.estimasi_table.heading("Aksi", text="Aksi", anchor="center")
 
@@ -577,23 +577,92 @@ class SPKInputFrame(tk.Frame):
 
         self.estimasi_table.pack(pady=10)
         self.estimasi_rows = {}  # simpan tombol hapus
+    
+    def parse_datetime(self, datetime_str):
+        try:
+            return datetime.strptime(datetime_str, "%d-%m-%Y %H:%M")
+        except ValueError:
+            return None
+    
+    def validate_schedule(self, new_start, new_end):
+        # Check all existing schedules
+        for item in self.estimasi_table.get_children():
+            start_str = self.estimasi_table.item(item, "values")[1]
+            end_str = self.estimasi_table.item(item, "values")[2]
+            existing_start = self.parse_datetime(start_str)
+            existing_end = self.parse_datetime(end_str)
+            
+            if (new_start < existing_end) and (new_end > existing_start):
+                return False, "Bentrok dengan jadwal yang sudah ada!"
+        
+        return True, ""
+    
+    def validate_tahapan(self, tahap):
+        for item in self.estimasi_table.get_children():
+            existing_tahap = self.estimasi_table.item(item, "values")[0]
+            if existing_tahap == tahap:
+                return False, "Tahapan sudah ada!"
+        
+        return True, ""
+    
+    def find_insert_position(self, new_start):
+        children = self.estimasi_table.get_children()
+        for pos, child in enumerate(children):
+            child_start_str = self.estimasi_table.item(child, "values")[1]
+            child_start = self.parse_datetime(child_start_str)
+            if new_start < child_start:
+                return pos
+        return "end"
+    
+    def sort_estimasi_table(self):
+        items = [(self.estimasi_table.item(item, "values"), item) 
+                for item in self.estimasi_table.get_children()]
+        
+        items.sort(key=lambda x: datetime.strptime(x[0][1], "%Y-%m-%d %H:%M"))
+        
+        for index, (_, item) in enumerate(items):
+            self.estimasi_table.move(item, "", index)
 
 
     def tambah_tahapan(self):
         tahap = self.selected_tahapan.get()
-        mulai = f"{self.mulai_tanggal.get_date().strftime('%Y-%m-%d')} {self.mulai_jam.get()}"
-        selesai = f"{self.selesai_tanggal.get_date().strftime('%Y-%m-%d')} {self.selesai_jam.get()}"
+        mulai = f"{self.mulai_tanggal.get_date().strftime('%d-%m-%Y')} {self.mulai_jam.get()}"
+        selesai = f"{self.selesai_tanggal.get_date().strftime('%d-%m-%Y')} {self.selesai_jam.get()}"
 
         if not tahap:
             messagebox.showwarning("Input Kosong", "Pilih tahapan terlebih dahulu.")
             return
 
-        # Tambah ke tabel
-        row_id = self.estimasi_table.insert("", "end", values=(tahap, mulai, selesai, "❌"))
+        valid, msg = self.validate_tahapan(tahap)
+        if not valid:
+            messagebox.showerror("Tahapan duplikat", msg)
+            return
 
-        # Simpan referensi tombol hapus
+        try:
+            new_start = datetime.strptime(mulai, "%d-%m-%Y %H:%M")
+            new_end = datetime.strptime(selesai, "%d-%m-%Y %H:%M")
+        except ValueError:
+            messagebox.showwarning("Format salah", "Format waktu tidak valid! Gunakan HH:MM")
+            return
+        
+        if new_start >= new_end:
+            messagebox.showwarning("Kesalahan input", "Waktu mulai harus sebelum waktu selesai!")
+            return
+        
+        valid, msg = self.validate_schedule(new_start, new_end)
+        if not valid:
+            messagebox.showerror("Bentrok jadwal", msg)
+            return
+        
+        # cari posisi insert
+        insert_pos = self.find_insert_position(new_start)
+        
+        row_id = self.estimasi_table.insert("", insert_pos, values=(tahap, mulai, selesai, "❌"))
+        
         self.estimasi_rows[row_id] = (tahap, mulai, selesai)
-        self.estimasi_table.bind("<Button-1>", self.hapus_row_tahapan)
+        
+        row_tag = "oddrow" if len(self.estimasi_rows) % 2 else "evenrow"
+        self.estimasi_table.item(row_id, tags=row_tag)
 
     def hapus_row_tahapan(self, event):
         region = self.estimasi_table.identify("region", event.x, event.y)
