@@ -23,10 +23,17 @@ class ScannerApp(Toplevel):
         
         self.entry.bind('<Return>', self.process_scan)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+        
+        # Initialize callback
+        self.scan_complete_callback = None
 
     def on_close(self):
         self.is_open = False
         self.destroy()
+
+    def set_scan_complete_callback(self, callback):
+        """Set callback function to be called after successful scan"""
+        self.scan_complete_callback = callback
 
     def process_scan(self, event):
         if not self.is_open:
@@ -95,7 +102,9 @@ class ScannerApp(Toplevel):
             self.db_conn.commit()
             if self.is_open:
                 self.status_label.config(text=message, fg='green')
-                self.parent.load_data()
+                # Execute callback if exists
+                if self.scan_complete_callback:
+                    self.scan_complete_callback()
                 self.after(2000, self.on_close)
         except sqlite3.Error as e:
             self.db_conn.rollback()

@@ -497,7 +497,7 @@ class SPKInputFrame(tk.Frame):
 
         # Frame Tambah Tahapan
         tambah_frame = tk.Frame(self.container, bg="#ffffff", relief="groove", borderwidth=2)
-        tambah_frame.pack(pady=20, padx=30, fill="x", ipady=15)
+        tambah_frame.pack(pady=20, padx=20, fill="x", ipady=15)
 
         self.tahapan_options = [
             "DESAIN", "ACC DESAIN", "DUMMY", "CTP", "POTONG BAHAN", "CETAK",

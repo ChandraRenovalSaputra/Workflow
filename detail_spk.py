@@ -87,13 +87,10 @@ class DetailSPKFrame(Frame):
                 Label(detail_card, text=value, font=('Segoe UI', 12), bg='white').grid(
                     row=i, column=2, sticky='w', padx=(5, 20), pady=6)
 
-            # Atur lebar kolom supaya rapi
             detail_card.grid_columnconfigure(0, minsize=150)
             detail_card.grid_columnconfigure(2, minsize=550)
-
         else:
             Label(self.scrollable_frame, text="❌ Data tidak ditemukan.", bg='#f0f2f5').pack()
-
 
         # === GAMBAR FRAME ===
         if spk_data:
@@ -102,7 +99,6 @@ class DetailSPKFrame(Frame):
 
             img_frame = Frame(img_container, bg='#f0f2f5')
             img_frame.pack(anchor="center")
-
 
             # Desain
             self.add_image_column(img_frame, 0, spk_data[16], "Desain")
@@ -118,53 +114,42 @@ class DetailSPKFrame(Frame):
             font=('Segoe UI', 18, 'bold'), bg='#f0f2f5', fg='#2c3e50'
         ).pack(pady=(20, 10))
 
-
-
         workflow_frame = Frame(self.scrollable_frame, bg='white', bd=1, relief='solid')
         workflow_frame.pack(padx=30, fill='both')
 
-        headers = ["Tahap", "Estimasi", "Mulai", "Selesai", "Status", "Keterangan"]
-        # HEADER
+        headers = ["Tahap", "Estimasi", "Scan Mulai", "Scan Selesai", "Status", "Keterangan"]
         for col, header in enumerate(headers):
             Label(
                 workflow_frame, text=header, font=('Segoe UI', 12, 'bold'),
                 bg='#0056b3', fg='white', padx=25, pady=12
             ).grid(row=0, column=col, sticky='nsew')
 
-        # Get scan data from spk_tracking
-        conn = sqlite3.connect("workflow.db")
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT 
-                tahapan,
-                MAX(scan_mulai) as mulai,
-                MAX(scan_selesai) as selesai
-            FROM spk_tracking 
-            WHERE spk_id = ?
-            GROUP BY tahapan
-        """, (self.spk_id,))
-        scan_data = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
-        conn.close()
-
         for i in range(len(headers)):
             workflow_frame.grid_columnconfigure(i, weight=1)
 
         # ISI
         if tahapan_data:
-            
             self.keterangan_vars = []
-
-            for row, (tahap, mulai, selesai, keterangan) in enumerate(tahapan_data, start=1):
-                status, bg_color = self.tentukan_status(mulai, selesai)
-                estimasi = f"{mulai[:10]} - {selesai[:10]}" if selesai else "-"
+            
+            for row, (tahap, estimasi_mulai, estimasi_selesai, keterangan, scan_mulai, scan_selesai) in enumerate(tahapan_data, start=1):
+                status, bg_color = self.tentukan_status(scan_mulai or estimasi_mulai, scan_selesai or estimasi_selesai)
+                estimasi = f"{estimasi_mulai[:10]} - {estimasi_selesai[:10]}" if estimasi_selesai else "-"
+                
+                # Format scan times to show only date if they exist
+                display_mulai = scan_mulai[:10] if scan_mulai else "-"
+                display_selesai = scan_selesai[:10] if scan_selesai else "-"
 
                 base_font = ('Segoe UI', 12)
                 status_font = ('Segoe UI', 12, 'bold')
 
-                Label(workflow_frame, text=tahap, bg='white', font=base_font).grid(row=row, column=0, sticky='nsew', padx=5, pady=6)
-                Label(workflow_frame, text=estimasi, bg='white', font=base_font).grid(row=row, column=1, sticky='nsew', padx=5, pady=6)
-                Label(workflow_frame, text=mulai or "-", bg='white', font=base_font).grid(row=row, column=2, sticky='nsew', padx=5, pady=6)
-                Label(workflow_frame, text=selesai or "-", bg='white', font=base_font).grid(row=row, column=3, sticky='nsew', padx=5, pady=6)
+                Label(workflow_frame, text=tahap, bg='white', font=base_font).grid(
+                    row=row, column=0, sticky='nsew', padx=5, pady=6)
+                Label(workflow_frame, text=estimasi, bg='white', font=base_font).grid(
+                    row=row, column=1, sticky='nsew', padx=5, pady=6)
+                Label(workflow_frame, text=display_mulai, bg='white', font=base_font).grid(
+                    row=row, column=2, sticky='nsew', padx=5, pady=6)
+                Label(workflow_frame, text=display_selesai, bg='white', font=base_font).grid(
+                    row=row, column=3, sticky='nsew', padx=5, pady=6)
 
                 Label(
                     workflow_frame, text=status, bg=bg_color, fg='white',
@@ -180,12 +165,10 @@ class DetailSPKFrame(Frame):
                     keterangan_var.set("Harap isi alasan keterlambatan")
                     entry_bg = "#ffeeba"  # kuning soft
 
-                entry = Entry(
+                Entry(
                     workflow_frame, textvariable=keterangan_var, font=base_font,
                     bg=entry_bg, relief='solid', bd=1, highlightthickness=1, highlightbackground='#ccc'
-                )
-                entry.grid(row=row, column=5, sticky='nsew', padx=5, pady=6, ipady=6)
-
+                ).grid(row=row, column=5, sticky='nsew', padx=5, pady=6, ipady=6)
 
         # === BUTTONS ===
         button_frame = Frame(self.scrollable_frame, bg='#f0f2f5')
@@ -194,7 +177,6 @@ class DetailSPKFrame(Frame):
         ttk.Style().configure("Green.TButton", font=('Segoe UI', 12, 'bold'), padding=10)
         ttk.Button(button_frame, text="💾 Simpan Keterangan", command=self.simpan_keterangan, style="Green.TButton").pack(side="left", padx=10)
         ttk.Button(button_frame, text="⏪ Kembali ke Jadwal", command=self.kembali_ke_jadwal, style="Green.TButton").pack(side="left", padx=10)
-
     
     def bind_scroll_event(self):
         """Binding scroll agar bisa dipakai di Windows"""
@@ -225,24 +207,38 @@ class DetailSPKFrame(Frame):
 
     def tentukan_status(self, mulai, selesai):
         """Menentukan status tahapan berdasarkan tanggal"""
-        if not selesai:
+        if not mulai or mulai == "-":
             return "BELUM", "#6c757d"  # Gray
         
         try:
-            mulai_date = datetime.strptime(mulai[:10], "%Y-%m-%d").date()
-            selesai_date = datetime.strptime(selesai[:10], "%Y-%m-%d").date()
+            # Handle both full timestamp and date-only formats
+            if " " in mulai:  # Has time component
+                mulai_date = datetime.strptime(mulai[:10], "%Y-%m-%d").date()
+            else:  # Date only
+                mulai_date = datetime.strptime(mulai, "%Y-%m-%d").date()
+                
             today = datetime.now().date()
             
-            if today < mulai_date:
-                return "BELUM", "#6c757d"  # Gray
-            elif mulai_date <= today <= selesai_date:
-                return "SEDANG BERJALAN", "#007bff"  # Blue
-            elif today > selesai_date:
-                return "TERLAMBAT", "#dc3545"  # Red
+            if not selesai or selesai == "-":
+                if today < mulai_date:
+                    return "BELUM", "#6c757d"  # Gray
+                elif mulai_date <= today:
+                    return "SEDANG BERJALAN", "#007bff"  # Blue
+                else:
+                    return "TERLAMBAT", "#dc3545"  # Red
             else:
-                return "SELESAI", "#28a745"  # Green
-        except:
-            return "SELESAI", "#28a745"  # Green
+                if " " in selesai:  # Has time component
+                    selesai_date = datetime.strptime(selesai[:10], "%Y-%m-%d").date()
+                else:  # Date only
+                    selesai_date = datetime.strptime(selesai, "%Y-%m-%d").date()
+                    
+                if selesai_date < today:
+                    return "TERLAMBAT", "#dc3545"  # Red
+                else:
+                    return "SELESAI", "#28a745"  # Green
+        except Exception as e:
+            print(f"Error determining status: {e}")
+            return "UNKNOWN", "#6c757d"  # Gray for unknown state
 
     def simpan_keterangan(self):
         """Validasi dan simpan keterangan ke database"""
@@ -255,12 +251,19 @@ class DetailSPKFrame(Frame):
         
         # Simpan ke database
         try:
+            conn = sqlite3.connect("workflow.db")
+            cursor = conn.cursor()
+            
             for tahap, var in self.keterangan_vars:
                 if var.get().strip():  # Hanya simpan jika ada isinya
-                    success = update_keterangan_tahapan(self.spk_id, tahap, var.get())
-                    if not success:
-                        raise Exception(f"Gagal menyimpan keterangan untuk tahap {tahap}")
+                    cursor.execute("""
+                        UPDATE spk_tahapan 
+                        SET keterangan = ?
+                        WHERE spk_id = ? AND nama_tahapan = ?
+                    """, (var.get(), self.spk_id, tahap))
             
+            conn.commit()
+            conn.close()
             messagebox.showinfo("Sukses", "Keterangan berhasil disimpan!")
         except Exception as e:
             messagebox.showerror("Error", f"Gagal menyimpan ke database: {str(e)}")

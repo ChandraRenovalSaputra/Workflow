@@ -24,6 +24,7 @@ class LihatJadwalFrame(Frame):
         Button(search_frame, text="🔍 Cari", font=('Segoe UI', 12, 'bold'),
                bg='#27ae60', fg='white', activebackground='#2ecc71',
                command=self.search, padx=15).pack(side=LEFT)
+        
 
         # 🧾 Scrollable Tabel
         outer_frame = Frame(self, bg='white', bd=1, relief=GROOVE)
@@ -50,17 +51,24 @@ class LihatJadwalFrame(Frame):
 
         # 🔙 Tombol Kembali
         Button(self, text="⬅️ Kembali ke Dashboard", command=self.kembali_ke_dashboard,
-               bg="#ffffff", fg='#2c3e50', font=('Segoe UI', 12, 'bold'),
-               activebackground='#bdc3c7', padx=20, pady=8, relief=GROOVE, bd=1).pack(pady=20, anchor=SE, padx=30)
+           bg="#ffffff", fg='#2c3e50', font=('Segoe UI', 12, 'bold'),
+           activebackground='#bdc3c7', padx=20, pady=8, relief=GROOVE, bd=1).pack(pady=20, anchor=SE, padx=30)
+        
+        Button(search_frame, text="📷 Scan", font=('Segoe UI', 12, 'bold'),
+            bg='#2980b9', fg='white', activebackground='#3498db',
+            command=self.open_scanner, padx=15).pack(side=LEFT, padx=10)
 
     def load_table(self, keyword=None):
-        rows = search_jadwal(keyword) if keyword else get_jadwal_pekerjaan()
+        if keyword is not None and keyword != "":
+            rows = search_jadwal(keyword)
+        else:
+            rows = get_jadwal_pekerjaan()
 
         for widget in self.table_frame.winfo_children():
             widget.destroy()
 
         headers = ["📝 Nama Pekerjaan", "🆔 ID", "📄 PO", "🚧 Tahap", "▶️ Mulai", "⏹️ Selesai", "⏰ Deadline", "🔍 Aksi"]
-        column_widths = [25, 18, 18, 19, 18, 18, 18, 14]  # ❗️Diperbesar
+        column_widths = [23, 15, 15, 17, 15, 15, 15, 12]  # ❗️Diperbesar
 
         # 🔶 Header
         for col, (text, width) in enumerate(zip(headers, column_widths)):
@@ -129,10 +137,16 @@ class LihatJadwalFrame(Frame):
 
     def open_scanner(self):
         from scanner_ui import ScannerApp
-        from db import get_workflow_conn
-        scanner = ScannerApp(self, get_workflow_conn())  # Pass self sebagai parent
+        scanner = ScannerApp(self, get_workflow_conn())
+        # Set the callback to refresh the table
+        scanner.set_scan_complete_callback(self.refresh_table)
         scanner.grab_set()
 
     def kembali_ke_dashboard(self):
         from ui_dashboard import DashboardFrame
         self.controller.switch_frame(DashboardFrame)
+
+    def refresh_table(self):
+        """Refresh the table with current data"""
+        self.load_table()
+        self.update_idletasks()  # Force UI update

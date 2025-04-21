@@ -5,8 +5,6 @@ from db import create_tables, create_spk_tables
 
 create_tables()
 create_spk_tables()
-from db import create_tables, fix_datetime_format
-
 
 def center_window(root, width=1600, height=800):
     """Menempatkan window di tengah layar"""
@@ -18,7 +16,8 @@ def center_window(root, width=1600, height=800):
     x = (screen_width // 2) - (width // 2)
     y = (screen_height // 2) - (height // 2)
     
-    root.geometry(f"{width}x{height}+{x}+{y}")  # Tentukan ukuran dan posisi
+    # root.geometry(f"{width}x{height}+{x}+{y}")  # Tentukan ukuran dan posisi
+    root.geometry(f"1000x800")  
     root.minsize(width, height)  # Set ukuran minimal
     root.configure(bg='white')  # Background putih jika diperlukan
 
@@ -43,13 +42,21 @@ class App(tk.Tk):
         """Berpindah antar frame"""
         if self._frame is not None:
             self._frame.destroy()
-            
+
         if args:
             self._frame = frame_class(self, self, *args)
-        else:       
+        else:
             self._frame = frame_class(self, self)
-        
+
+        # 🆕 Cek dan panggil load_table jika ada
+        if hasattr(self._frame, "load_table"):
+            try:
+                self._frame.load_table()
+            except Exception as e:
+                print(f"Gagal load_table: {e}")
+
         self._frame.pack(fill="both", expand=True)
+
 
     def show_preview_frame(self, spk_id):
         """Menampilkan preview SPK"""
@@ -58,8 +65,5 @@ class App(tk.Tk):
         
 
 if __name__ == "__main__":
-    create_tables()  # Buat tabel jika belum ada
-    fix_datetime_format()  # Perbaiki format waktu
-    
     app = App()
     app.mainloop()

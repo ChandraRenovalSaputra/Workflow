@@ -62,8 +62,7 @@ def get_jadwal_pekerjaan():
             spk_id,
             tahapan,
             MAX(scan_mulai) as last_scan_mulai,
-            MAX(scan_selesai) as last_scan_selesai,
-            operator
+            MAX(scan_selesai) as last_scan_selesai
         FROM spk_tracking
         GROUP BY spk_id, tahapan
     ),
@@ -74,7 +73,6 @@ def get_jadwal_pekerjaan():
             lt.last_scan_mulai as mulai,
             lt.last_scan_selesai as selesai,
             t.selesai as target_selesai,  -- Kolom target dari spk_tahapan
-            lt.operator,
             ROW_NUMBER() OVER (PARTITION BY t.spk_id ORDER BY 
                 CASE 
                     WHEN lt.last_scan_selesai IS NULL AND lt.last_scan_mulai IS NOT NULL THEN 0
@@ -91,8 +89,7 @@ def get_jadwal_pekerjaan():
         cs.nama_tahapan,
         cs.mulai,
         cs.selesai,
-        cs.target_selesai as target,  -- Diubah dari 'deadline' menjadi 'target'
-        cs.operator
+        cs.target_selesai as target
     FROM spk s
     JOIN current_stages cs ON s.id = cs.spk_id AND cs.stage_priority = 1
     WHERE cs.selesai IS NULL
@@ -107,19 +104,30 @@ def get_jadwal_pekerjaan():
 def get_spk_details(spk_id):
     conn = get_workflow_conn()
     cursor = conn.cursor()
-
+    
+    # Get SPK basic info
     cursor.execute("SELECT * FROM spk WHERE id = ?", (spk_id,))
     spk_data = cursor.fetchone()
-
-    cursor.execute('''
-        SELECT nama_tahapan, mulai, selesai, keterangan 
-        FROM spk_tahapan 
-        WHERE spk_id = ?
-        ORDER BY date(mulai) ASC
-    ''', (spk_id,))
+    
+    # Get tahapan with scan times - modified to match your schema
+    cursor.execute("""
+        SELECT 
+            t.nama_tahapan,
+            t.mulai as estimasi_mulai,
+            t.selesai as estimasi_selesai,
+            t.keterangan,
+            MAX(tr.scan_mulai) as scan_mulai,
+            MAX(tr.scan_selesai) as scan_selesai
+        FROM spk_tahapan t
+        LEFT JOIN spk_tracking tr ON t.spk_id = tr.spk_id AND t.nama_tahapan = tr.tahapan
+        WHERE t.spk_id = ?
+        GROUP BY t.nama_tahapan
+        ORDER BY t.id
+    """, (spk_id,))
+    
     tahapan_data = cursor.fetchall()
-
     conn.close()
+    
     return spk_data, tahapan_data
 
 def create_spk_tables():
@@ -261,3 +269,54 @@ def get_active_tahapan(spk_id):
     
     conn.close()
     return tahap_berikutnya[0] if tahap_berikutnya else None
+
+def search_jadwal(keyword):
+    if not keyword:  # kalau None atau string kosong, fallback ke get_jadwal_pekerjaan
+        return get_jadwal_pekerjaan()
+
+    conn = get_workflow_conn()
+    cursor = conn.cursor()
+    query = """
+    WITH latest_tracking AS (
+        SELECT 
+            spk_id,
+            tahapan,
+            MAX(scan_mulai) as last_scan_mulai,
+            MAX(scan_selesai) as last_scan_selesai
+        FROM spk_tracking
+        GROUP BY spk_id, tahapan
+    ),
+    current_stages AS (
+        SELECT
+            t.spk_id,
+            t.nama_tahapan,
+            lt.last_scan_mulai as mulai,
+            lt.last_scan_selesai as selesai,
+            t.selesai as target_selesai,
+            ROW_NUMBER() OVER (PARTITION BY t.spk_id ORDER BY 
+                CASE 
+                    WHEN lt.last_scan_selesai IS NULL AND lt.last_scan_mulai IS NOT NULL THEN 0
+                    WHEN lt.last_scan_mulai IS NULL THEN 1
+                    ELSE 2
+                END) as stage_priority
+        FROM spk_tahapan t
+        LEFT JOIN latest_tracking lt ON t.spk_id = lt.spk_id AND t.nama_tahapan = lt.tahapan
+    )
+    SELECT
+        s.nama_artikel,
+        s.id as spk_id,
+        s.no_po,
+        cs.nama_tahapan,
+        cs.mulai,
+        cs.selesai,
+        cs.target_selesai as target
+    FROM spk s
+    JOIN current_stages cs ON s.id = cs.spk_id AND cs.stage_priority = 1
+    WHERE cs.selesai IS NULL
+    AND s.nama_artikel LIKE ?
+    ORDER BY cs.target_selesai ASC
+    """
+    cursor.execute(query, ('%' + keyword + '%',))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows

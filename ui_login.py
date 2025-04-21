@@ -105,6 +105,7 @@ class LoginFrame(tk.Frame):
         user = check_login(username, password)
         if user:
             self.controller.current_user = user
+            self.unbind_all("<Return>")
             self.controller.switch_frame(DashboardFrame)
         else:
             messagebox.showerror("Login Gagal", "Username atau password salah.")

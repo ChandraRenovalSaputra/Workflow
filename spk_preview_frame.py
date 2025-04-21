@@ -1,17 +1,16 @@
 import tkinter as tk
-# from tkinter import ttk
 from PIL import Image, ImageTk
 import sqlite3
 import qrcode
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 import os
 from tkinter import messagebox
 from ui_dashboard import DashboardFrame
+from scrollable_frame import ScrollableFrame  # Pastikan path import sesuai
+from reportlab.pdfgen import canvas
 
 class SPKPreviewFrame(tk.Frame):
     def __init__(self, parent, controller, spk_id):
-        super().__init__(parent, bg="#f7f9fb")  # Background soft
+        super().__init__(parent, bg="#f7f9fb")
         self.controller = controller
         self.spk_id = spk_id
         self.data = self.get_spk_data(spk_id)
@@ -27,16 +26,19 @@ class SPKPreviewFrame(tk.Frame):
         return dict(zip(col, row)) if row else {}
 
     def build_ui(self):
-        # Header
-        header = tk.Label(self, text="📝 SURAT PERINTAH KERJA", font=("Helvetica", 24, "bold"), bg="#f7f9fb", fg="#2c3e50")
+        # Header (di luar scroll)
+        header = tk.Label(self, text="📝 SURAT PERINTAH KERJA", font=("Helvetica", 24, "bold"),
+                          bg="#f7f9fb", fg="#2c3e50")
         header.pack(pady=25)
 
-        # Main content area
-        content_frame = tk.Frame(self, bg="white", bd=3, relief="solid")
-        content_frame.pack(padx=40, pady=15, fill="both", expand=True)
+        # Scrollable content
+        scroll = ScrollableFrame(self)
+        scroll.pack(fill="both", expand=True, padx=40, pady=(0, 20))
+        content_frame = scroll.scrollable_frame
 
         # Section Title
-        section_title = tk.Label(content_frame, text="📄 Detail Informasi SPK", font=("Helvetica", 14, "bold"), bg="white", fg="#34495e")
+        section_title = tk.Label(content_frame, text="📄 Detail Informasi SPK",
+                                 font=("Helvetica", 14, "bold"), bg="white", fg="#34495e")
         section_title.pack(pady=(15, 0), anchor="w", padx=20)
 
         info_items = [
@@ -48,15 +50,18 @@ class SPKPreviewFrame(tk.Frame):
             ("WARNA", "warna"), ("VARNISH", "varnish"), ("FINISHING", "finishing"),
         ]
 
-        info_frame = tk.Frame(content_frame, bg="white")
-        info_frame.pack(padx=30, pady=10, anchor="w")
+        info_frame = tk.Frame(content_frame, bg="white", bd=3, relief="solid")
+        info_frame.pack(padx=10, pady=10, fill="x")
 
         for i, (label_text, key) in enumerate(info_items):
-            tk.Label(info_frame, text=f"{label_text} :", font=("Helvetica", 11, "bold"), bg="white", anchor="w", width=18).grid(row=i, column=0, sticky="w", pady=3)
-            tk.Label(info_frame, text=self.data.get(key, "-"), font=("Helvetica", 11), bg="white", anchor="w").grid(row=i, column=1, sticky="w", pady=3)
+            tk.Label(info_frame, text=f"{label_text} :", font=("Helvetica", 11, "bold"),
+                     bg="white", anchor="w", width=18).grid(row=i, column=0, sticky="w", pady=3, padx=10)
+            tk.Label(info_frame, text=self.data.get(key, "-"), font=("Helvetica", 11),
+                     bg="white", anchor="w").grid(row=i, column=1, sticky="w", pady=3)
 
         # Image & Barcode Section
-        section_images = tk.Label(content_frame, text="🖼️ Gambar & Barcode", font=("Helvetica", 14, "bold"), bg="white", fg="#34495e")
+        section_images = tk.Label(content_frame, text="🖼️ Gambar & Barcode",
+                                  font=("Helvetica", 14, "bold"), bg="white", fg="#34495e")
         section_images.pack(pady=(20, 5), anchor="w", padx=20)
 
         img_frame = tk.Frame(content_frame, bg="white")
@@ -66,10 +71,11 @@ class SPKPreviewFrame(tk.Frame):
         self.generate_and_show_barcode(img_frame)
         self.show_image(img_frame, self.data.get('gambar_dummy'), "Dummy")
 
-        # Back Button
-        btn_frame = tk.Frame(self, bg="#f7f9fb")
+        # Back Button (masih di dalam scroll agar tetap ikut scroll ke bawah)
+        btn_frame = tk.Frame(content_frame, bg="white")
         btn_frame.pack(pady=30)
-        back_button = tk.Button(btn_frame, text="⬅️ Kembali ke Dashboard", font=("Helvetica", 12, "bold"), bg="#27ae60", fg="white", padx=20, pady=8,
+        back_button = tk.Button(btn_frame, text="⬅️ Kembali ke Dashboard", font=("Helvetica", 12, "bold"),
+                                bg="#27ae60", fg="white", padx=20, pady=8,
                                 command=lambda: self.controller.switch_frame(DashboardFrame))
         back_button.pack()
 
@@ -83,7 +89,7 @@ class SPKPreviewFrame(tk.Frame):
             photo = ImageTk.PhotoImage(img)
             label_image = tk.Label(frame, image=photo, bg="white")
             label_image.pack()
-            frame.image = photo
+            frame.image = photo  # Keep a reference
         else:
             label_image = tk.Label(frame, text="[Gambar Tidak Ada]", bg="white", fg="gray", font=("Helvetica", 10, "italic"))
             label_image.pack()
@@ -97,3 +103,8 @@ class SPKPreviewFrame(tk.Frame):
         qr.save(barcode_path)
         self.show_image(parent, barcode_path, "Barcode")
         self.barcode_path = barcode_path
+
+    def destroy(self):
+        if hasattr(self, 'barcode_path') and os.path.exists(self.barcode_path):
+            os.remove(self.barcode_path)
+        super().destroy()
