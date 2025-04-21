@@ -321,7 +321,7 @@ def search_jadwal(keyword):
     conn.close()
     return rows
 
-def alter_add_barcode_column():
+def tambah_colom_db():
     conn = get_workflow_conn()
     cursor = conn.cursor()
     try:
@@ -332,6 +332,10 @@ def alter_add_barcode_column():
         cursor.execute("ALTER TABLE spk ADD COLUMN barcode_image TEXT")
         conn.commit()
         print("✅ Kolom barcode_data dan image berhasil ditambahkan.")
+
+        cursor.execute("ALTER TABLE spk_tahapan ADD COLUMN keterangan TEXT")
+        conn.commit()
+        print("✅ Kolom keterangan berhasil ditambahkan.")
     except sqlite3.OperationalError as e:
         print("ℹ️ Kolom sudah ada atau error lain:", e)
     finally:

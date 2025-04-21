@@ -177,7 +177,34 @@ class DetailSPKFrame(Frame):
         ttk.Style().configure("Green.TButton", font=('Segoe UI', 12, 'bold'), padding=10)
         ttk.Button(button_frame, text="💾 Simpan Keterangan", command=self.simpan_keterangan, style="Green.TButton").pack(side="left", padx=10)
         ttk.Button(button_frame, text="⏪ Kembali ke Jadwal", command=self.kembali_ke_jadwal, style="Green.TButton").pack(side="left", padx=10)
-    
+
+    @staticmethod
+    def parse_datetime(dt_str):
+        """Static method untuk parsing tanggal dari berbagai format"""
+        if not dt_str or str(dt_str).strip() in ("", "-"):
+            return None
+            
+        dt_str = str(dt_str).strip()
+        
+        # Daftar format yang didukung (termasuk format Indonesia dan ISO)
+        formats = [
+            '%d-%m-%Y %H:%M',    # 21-04-2025 17:00
+            '%Y-%m-%d %H:%M:%S',  # 2025-04-21 15:59:48
+            '%Y-%m-%d %H:%M',     # 2025-04-21 15:59
+            '%d-%m-%Y',           # 21-04-2025
+            '%Y-%m-%d',           # 2025-04-21
+            '%H:%M %d-%m-%Y',     # 17:00 21-04-2025 (format alternatif)
+            '%H:%M:%S %Y-%m-%d'   # 15:59:48 2025-04-21
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(dt_str, fmt)
+            except ValueError:
+                continue
+        print(f"Format waktu tidak dikenali: {dt_str}")
+        return None
+
     def bind_scroll_event(self):
         """Binding scroll agar bisa dipakai di Windows"""
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
@@ -204,41 +231,6 @@ class DetailSPKFrame(Frame):
         bio = BytesIO()
         img.save(bio, format="PNG")
         return Image.open(bio)
-
-    def tentukan_status(self, mulai, selesai):
-        """Menentukan status tahapan berdasarkan tanggal"""
-        if not mulai or mulai == "-":
-            return "BELUM", "#6c757d"  # Gray
-        
-        try:
-            # Handle both full timestamp and date-only formats
-            if " " in mulai:  # Has time component
-                mulai_date = datetime.strptime(mulai[:10], "%Y-%m-%d").date()
-            else:  # Date only
-                mulai_date = datetime.strptime(mulai, "%Y-%m-%d").date()
-                
-            today = datetime.now().date()
-            
-            if not selesai or selesai == "-":
-                if today < mulai_date:
-                    return "BELUM", "#6c757d"  # Gray
-                elif mulai_date <= today:
-                    return "SEDANG BERJALAN", "#007bff"  # Blue
-                else:
-                    return "TERLAMBAT", "#dc3545"  # Red
-            else:
-                if " " in selesai:  # Has time component
-                    selesai_date = datetime.strptime(selesai[:10], "%Y-%m-%d").date()
-                else:  # Date only
-                    selesai_date = datetime.strptime(selesai, "%Y-%m-%d").date()
-                    
-                if selesai_date < today:
-                    return "TERLAMBAT", "#dc3545"  # Red
-                else:
-                    return "SELESAI", "#28a745"  # Green
-        except Exception as e:
-            print(f"Error determining status: {e}")
-            return "UNKNOWN", "#6c757d"  # Gray for unknown state
 
     def simpan_keterangan(self):
         """Validasi dan simpan keterangan ke database"""
@@ -286,27 +278,7 @@ class DetailSPKFrame(Frame):
         self.tracking_tree.pack()
         
         self.load_tracking_data()
-    
-    def load_tracking_data(self):
-        conn = sqlite3.connect("workflow.db")
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT tahapan, scan_mulai, scan_selesai, operator 
-            FROM spk_tracking 
-            WHERE spk_id=?
-            ORDER BY scan_mulai
-        """, (self.spk_id,))
-        
-        for row in cursor.fetchall():
-            durasi = "Sedang berjalan"
-            if row[2]:  # Jika ada waktu selesai
-                start = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
-                end = datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S")
-                durasi = f"{(end-start).total_seconds()/60:.1f} menit"
-            
-            self.tracking_tree.insert("", "end", values=(row[0], row[1], row[2] or "-", durasi, row[3]))
-        
-        conn.close()
+
     def add_image_column(self, parent, col, image_source, title):
         try:
             if isinstance(image_source, Image.Image):
@@ -329,3 +301,66 @@ class DetailSPKFrame(Frame):
             Label(frame, text=title, font=('Segoe UI', 10, 'bold'), bg='white').pack()
         except Exception as e:
             print(f"Error loading {title} image: {e}")
+
+    def tentukan_status(self, mulai, selesai):
+        """Menentukan status tahapan dengan format tanggal fleksibel"""
+        try:
+            # Gunakan DetailSPKFrame.parse_datetime() untuk static method
+            mulai_dt = DetailSPKFrame.parse_datetime(mulai)
+            selesai_dt = DetailSPKFrame.parse_datetime(selesai) if selesai and str(selesai).strip() != "-" else None
+            
+            if not mulai_dt:
+                return "BELUM", "#6c757d"
+                
+            today = datetime.now()
+            
+            if not selesai_dt:
+                if today < mulai_dt:
+                    return "BELUM", "#6c757d"
+                elif mulai_dt <= today:
+                    return "SEDANG BERJALAN", "#007bff"
+                else:
+                    return "TERLAMBAT", "#dc3545"
+            else:
+                if today > selesai_dt:
+                    return "TERLAMBAT", "#dc3545"
+                else:
+                    return "SELESAI", "#28a745"
+                    
+        except Exception as e:
+            print(f"Error menentukan status: {e}\nMulai: {mulai}\nSelesai: {selesai}")
+            return "UNKNOWN", "#6c757d"
+
+    def load_tracking_data(self):
+        conn = sqlite3.connect("workflow.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT tahapan, scan_mulai, scan_selesai, operator 
+            FROM spk_tracking 
+            WHERE spk_id=?
+            ORDER BY scan_mulai
+        """, (self.spk_id,))
+        
+        for row in cursor.fetchall():
+            durasi = "Sedang berjalan"
+            try:
+                if row[2]:  # Jika ada waktu selesai
+                    start = DetailSPKFrame.parse_datetime(row[1])
+                    end = DetailSPKFrame.parse_datetime(row[2])
+                    if start and end:
+                        durasi = f"{(end-start).total_seconds()/60:.1f} menit"
+                    else:
+                        durasi = "Data tidak valid"
+            except Exception as e:
+                durasi = "Format Error"
+                print(f"Error parsing waktu: {e}")
+            
+            self.tracking_tree.insert("", "end", values=(
+                row[0], 
+                row[1] or "-", 
+                row[2] or "-", 
+                durasi, 
+                row[3] or "-"
+            ))
+        
+        conn.close()
