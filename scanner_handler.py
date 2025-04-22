@@ -8,7 +8,7 @@ class BarcodeScanner:
 def handle_scan(self, spk_id, tahapan, operator):
     try:
         cursor = self.conn.cursor()
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
         
         # 1. Cek tahapan yang sedang aktif untuk SPK ini
         cursor.execute("""

@@ -71,7 +71,7 @@ class ScannerApp(Toplevel):
             raise ValueError("Tidak ada tahapan yang perlu diproses")
         
         # 3. Proses update
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
         
         # Cek apakah sudah ada record yang belum selesai
         cursor.execute("""

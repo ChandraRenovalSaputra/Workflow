@@ -240,8 +240,7 @@ class LihatJadwalFrame(Frame):
                 return "normal"  # Putih
 
             # Parse waktu
-            # mulai_dt = datetime.strptime(mulai, "%Y-%m-%d %H:%M:%S")
-            target_dt = datetime.strptime(target, "%Y-%m-%d %H:%M")
+            target_dt = datetime.strptime(target, "%d-%m-%Y %H:%M")
 
             if datetime.now() > target_dt:
                 return "terlambat"  # Merah muda

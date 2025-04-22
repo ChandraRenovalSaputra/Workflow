@@ -275,12 +275,7 @@ class DetailSPKFrame(Frame):
         # Daftar format yang didukung (termasuk format Indonesia dan ISO)
         formats = [
             "%d-%m-%Y %H:%M",  # 21-04-2025 17:00
-            "%Y-%m-%d %H:%M:%S",  # 2025-04-21 15:59:48
-            "%Y-%m-%d %H:%M",  # 2025-04-21 15:59
-            "%d-%m-%Y",  # 21-04-2025
-            "%Y-%m-%d",  # 2025-04-21
-            "%H:%M %d-%m-%Y",  # 17:00 21-04-2025 (format alternatif)
-            "%H:%M:%S %Y-%m-%d",  # 15:59:48 2025-04-21
+            "%d-%m-%Y %H:%M:%S",  # 21-04-2025 15:59:48
         ]
 
         for fmt in formats:
