@@ -189,14 +189,14 @@ class DetailSPKFrame(Frame):
                     scan_mulai or estimasi_mulai, scan_selesai or estimasi_selesai
                 )
                 estimasi = (
-                    f"{estimasi_mulai[:10]} - {estimasi_selesai[:10]}"
+                    f"{estimasi_mulai} - {estimasi_selesai}"
                     if estimasi_selesai
                     else "-"
                 )
 
                 # Format scan times to show only date if they exist
-                display_mulai = scan_mulai[:10] if scan_mulai else "-"
-                display_selesai = scan_selesai[:10] if scan_selesai else "-"
+                display_mulai = scan_mulai if scan_mulai else "-"
+                display_selesai = scan_selesai if scan_selesai else "-"
 
                 base_font = ("Segoe UI", 12)
                 status_font = ("Segoe UI", 12, "bold")
