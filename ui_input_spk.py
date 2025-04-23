@@ -504,17 +504,17 @@ class SPKInputFrame(tk.Frame):
             "POND", "FORMING", "LAMINATING", "PACKING", "PENGIRIMAN", "DITERIMA COSTUMER"
         ]
 
-        label_font = ("Arial", 16, "bold")
-        entry_font = ("Arial", 16)
+        label_font = ("Arial", 14, "bold")
+        entry_font = ("Arial", 14)
 
         # Baris input
-        tk.Label(tambah_frame, text="Tahapan:", font=label_font, bg="#ffffff").grid(row=0, column=0, padx=12, pady=10, sticky="w")
+        tk.Label(tambah_frame, text="Tahapan:", font=label_font, bg="#ffffff").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.selected_tahapan = ttk.Combobox(
             tambah_frame,
             values=self.tahapan_options,
             state="readonly",
             width=25,
-            font=("Arial", 16),
+            font=("Arial", 14),
             style="Big.TCombobox"  # pakai style besar
         )
 
@@ -562,10 +562,10 @@ class SPKInputFrame(tk.Frame):
         self.estimasi_table.heading("Selesai", text="Selesai", anchor="center")
         self.estimasi_table.heading("Aksi", text="Aksi", anchor="center")
 
-        self.estimasi_table.column("Tahap", width=350, anchor="center")
-        self.estimasi_table.column("Mulai", width=350, anchor="center")
-        self.estimasi_table.column("Selesai", width=350, anchor="center")
-        self.estimasi_table.column("Aksi", width=350, anchor="center")
+        self.estimasi_table.column("Tahap", width=300, anchor="center")
+        self.estimasi_table.column("Mulai", width=300, anchor="center")
+        self.estimasi_table.column("Selesai", width=300, anchor="center")
+        self.estimasi_table.column("Aksi", width=300, anchor="center")
 
         self.estimasi_table.pack(pady=20, padx=30)
         self.estimasi_rows = {}

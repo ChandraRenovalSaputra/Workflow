@@ -400,8 +400,4 @@ def tambah_colom_db():
     except sqlite3.OperationalError as e:
         print("ℹ️ Kolom sudah ada atau error lain:", e)
     finally:
-<<<<<<< HEAD
         conn.close()
-=======
-        conn.close()
->>>>>>> 4a0cafa991840edf09b92b03c4629b02f790b674

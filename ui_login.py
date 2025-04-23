@@ -159,8 +159,4 @@ class LoginFrame(tk.Frame):
             self.unbind_all("<Return>")
             self.controller.switch_frame(DashboardFrame)
         else:
-<<<<<<< HEAD
             self.custom_messagebox("Login Gagal", "Username atau password salah.")
-=======
-            messagebox.showerror("Login Gagal", "Username atau password salah.")
->>>>>>> 4a0cafa991840edf09b92b03c4629b02f790b674
