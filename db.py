@@ -88,14 +88,15 @@ def get_jadwal_pekerjaan():
             t.selesai as target_selesai,
             ROW_NUMBER() OVER (PARTITION BY t.spk_id ORDER BY 
                 CASE 
-                    WHEN lt.last_scan_selesai IS NULL AND lt.last_scan_mulai IS NOT NULL THEN 0
+                    WHEN lt.last_scan_mulai IS NOT NULL AND lt.last_scan_selesai IS NULL THEN 0
                     WHEN lt.last_scan_mulai IS NULL THEN 1
                     ELSE 2
-                END) as stage_priority
+                END,
+                lt.last_scan_mulai DESC NULLS LAST
+            ) as stage_priority
         FROM spk_tahapan t
         LEFT JOIN latest_tracking lt ON t.spk_id = lt.spk_id AND t.nama_tahapan = lt.tahapan
     ),
-    -- TAMBAHAN: Cek apakah semua tahapan sudah selesai
     spk_status AS (
         SELECT 
             s.id as spk_id,
@@ -113,14 +114,14 @@ def get_jadwal_pekerjaan():
         s.nama_artikel,
         s.id as spk_id,
         s.no_po,
-        ss.status, -- Kolom status baru
+        ss.status,
         cs.nama_tahapan,
         cs.mulai,
         cs.selesai,
         cs.target_selesai as target
     FROM spk s
     JOIN current_stages cs ON s.id = cs.spk_id AND cs.stage_priority = 1
-    JOIN spk_status ss ON s.id = ss.spk_id -- Join dengan status
+    JOIN spk_status ss ON s.id = ss.spk_id
     ORDER BY cs.target_selesai ASC
     """
 
@@ -128,6 +129,7 @@ def get_jadwal_pekerjaan():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
 
 
 def get_spk_details(spk_id):

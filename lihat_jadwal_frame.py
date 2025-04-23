@@ -142,6 +142,16 @@ class LihatJadwalFrame(Frame):
 
         print(f"Data setelah filter status '{filter_status}': ", rows)
 
+        # 🔁 Ambil hanya tahap terakhir per SPK (berdasarkan waktu mulai terbaru)
+        filtered_rows = {}
+        for row in rows:
+            spk_id = row[1]  # Kolom ke-2 = SPK ID
+            if spk_id not in filtered_rows or row[5] > filtered_rows[spk_id][5]:  # Kolom ke-6 = waktu mulai
+                filtered_rows[spk_id] = row
+
+        rows = list(filtered_rows.values())
+
+
         headers = [
             "📝 Nama Pekerjaan",
             "🆔 ID",
@@ -180,37 +190,36 @@ class LihatJadwalFrame(Frame):
 
         # 🔷 Baris data
         for i, row in enumerate(rows, start=1):
-            row_to_display = row[:3] + row[4:]  # Lewatkan status (index ke-3)
-            bg_color = "#f8f9fa" if i % 2 == 0 else "white"
+            row_to_display = row[:3] + row[4:]  # skip kolom ke-3 (status)
+
+            tag = self.get_row_tag(row[5], row[7])  # mulai = row[5], deadline = row[7]
+
+            if tag == "belum":
+                bg_color = "#dfe6e9"
+            elif tag == "terlambat":
+                bg_color = "#fab1a0"
+            elif tag == "warning":
+                bg_color = "#ffeaa7"
+            elif tag == "sedang":
+                bg_color = "#dff9fb"
+            else:
+                bg_color = "#d6f5d6"
 
             for j, val in enumerate(row_to_display):
-                font_style = ("Segoe UI", 14)
-                if j == 3:  # Kolom Tahap
-                    Label(
-                        self.table_frame,
-                        text=val,
-                        bd=1,
-                        relief=RIDGE,
-                        width=column_widths[j],
-                        bg="#ffeaa7",
-                        fg="black",
-                        font=("Segoe UI", 14, "bold"),
-                        height=2,
-                    ).grid(row=i, column=j, sticky="nsew")
-                else:
-                    Label(
-                        self.table_frame,
-                        text=val,
-                        bd=1,
-                        relief=RIDGE,
-                        width=column_widths[j],
-                        bg=bg_color,
-                        anchor="w",
-                        font=font_style,
-                        height=2,
-                    ).grid(row=i, column=j, sticky="nsew")
+                font_style = ("Segoe UI", 14, "bold") if j == 3 else ("Segoe UI", 14)
+                Label(
+                    self.table_frame,
+                    text=val,
+                    bd=1,
+                    relief=RIDGE,
+                    width=column_widths[j],
+                    bg=bg_color,
+                    anchor="w",
+                    font=font_style,
+                    height=2,
+                ).grid(row=i, column=j, sticky="nsew")
 
-            # 🔘 Tombol Detail
+
             Button(
                 self.table_frame,
                 text="ℹ️ Detail",
@@ -222,6 +231,8 @@ class LihatJadwalFrame(Frame):
                 command=lambda sid=row[1]: self.lihat_detail(sid),
             ).grid(row=i, column=len(headers) - 1, sticky="nsew", ipadx=10, pady=2)
 
+
+
         # Responsif
         for col in range(len(headers)):
             self.table_frame.grid_columnconfigure(col, weight=1)
@@ -231,26 +242,33 @@ class LihatJadwalFrame(Frame):
         show_spk_detail(self.controller, spk_id)
 
     def get_row_tag(self, mulai, target):
-        """Determine row color based on status"""
-        if not mulai or mulai == "-":
-            return "belum"  # Abu-abu
+        """Tentukan tag warna berdasarkan status deadline"""
+        print(f"[DEBUG] Mulai: {mulai}, Target: {target}")  # log
+
+        if not mulai or mulai.strip() == "-":
+            return "belum"
 
         try:
-            if not target or target == "-":
-                return "normal"  # Putih
+            if not target or target.strip() == "-":
+                return "normal"
 
-            # Parse waktu
-            target_dt = datetime.strptime(target, "%d-%m-%Y %H:%M")
+            # Coba parsing waktu deadline
+            target_dt = datetime.strptime(target.strip(), "%d-%m-%Y %H:%M")
+            now = datetime.now()
 
-            if datetime.now() > target_dt:
-                return "terlambat"  # Merah muda
+            print(f"[DEBUG] Now: {now}, Deadline: {target_dt}")  # log waktu
 
-            if (target_dt - datetime.now()).total_seconds() < 12 * 3600:
-                return "warning"  # Kuning
+            if now > target_dt:
+                return "terlambat"
 
-            return "sedang"  # Kuning muda (sedang dikerjakan)
-        except:
+            if (target_dt - now).total_seconds() < 12 * 3600:
+                return "warning"
+
             return "normal"
+        except Exception as e:
+            print(f"[ERROR] Gagal parsing waktu: {e}")
+            return "normal"
+
 
     def search(self):
         keyword = self.search_var.get()
