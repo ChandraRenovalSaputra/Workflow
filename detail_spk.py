@@ -9,7 +9,6 @@ import qrcode
 from datetime import datetime
 from io import BytesIO
 from tkinter import ttk
-import tkinter as tk
 
 
 def center_window(root, width=1600, height=800):
@@ -175,6 +174,10 @@ class DetailSPKFrame(Frame):
 
         # ISI
         if tahapan_data:
+<<<<<<< HEAD
+=======
+            print(tahapan_data)
+>>>>>>> 4a0cafa991840edf09b92b03c4629b02f790b674
             self.keterangan_vars = []
 
             for row, (
@@ -185,6 +188,7 @@ class DetailSPKFrame(Frame):
                 scan_mulai,
                 scan_selesai,
             ) in enumerate(tahapan_data, start=1):
+<<<<<<< HEAD
                 status, bg_color = self.tentukan_status(
                     scan_mulai or estimasi_mulai, scan_selesai or estimasi_selesai
                 )
@@ -197,6 +201,24 @@ class DetailSPKFrame(Frame):
                 # Format scan times to show only date if they exist
                 display_mulai = scan_mulai[:10] if scan_mulai else "-"
                 display_selesai = scan_selesai[:10] if scan_selesai else "-"
+=======
+
+                status, bg_color = self.tentukan_status(
+                    scan_mulai,
+                    scan_selesai,
+                    estimasi_selesai
+                )
+
+                estimasi = (
+                    f"{estimasi_mulai} - {estimasi_selesai}"
+                    if estimasi_selesai
+                    else "-"
+                )
+
+                # Format scan times to show only date if they exist
+                display_mulai = scan_mulai if scan_mulai else "-"
+                display_selesai = scan_selesai if scan_selesai else "-"
+>>>>>>> 4a0cafa991840edf09b92b03c4629b02f790b674
 
                 base_font = ("Segoe UI", 12)
                 status_font = ("Segoe UI", 12, "bold")
@@ -275,12 +297,16 @@ class DetailSPKFrame(Frame):
         # Daftar format yang didukung (termasuk format Indonesia dan ISO)
         formats = [
             "%d-%m-%Y %H:%M",  # 21-04-2025 17:00
+<<<<<<< HEAD
             "%Y-%m-%d %H:%M:%S",  # 2025-04-21 15:59:48
             "%Y-%m-%d %H:%M",  # 2025-04-21 15:59
             "%d-%m-%Y",  # 21-04-2025
             "%Y-%m-%d",  # 2025-04-21
             "%H:%M %d-%m-%Y",  # 17:00 21-04-2025 (format alternatif)
             "%H:%M:%S %Y-%m-%d",  # 15:59:48 2025-04-21
+=======
+            "%d-%m-%Y %H:%M:%S",  # 21-04-2025 15:59:48
+>>>>>>> 4a0cafa991840edf09b92b03c4629b02f790b674
         ]
 
         for fmt in formats:
@@ -396,6 +422,7 @@ class DetailSPKFrame(Frame):
         except Exception as e:
             print(f"Error loading {title} image: {e}")
 
+<<<<<<< HEAD
     def tentukan_status(self, mulai, selesai):
         """Menentukan status tahapan dengan format tanggal fleksibel"""
         try:
@@ -429,6 +456,27 @@ class DetailSPKFrame(Frame):
 
         except Exception as e:
             print(f"Error menentukan status: {e}\nMulai: {mulai}\nSelesai: {selesai}")
+=======
+    def tentukan_status(self, scan_mulai, scan_selesai, estimasi_selesai):
+        """Menentukan status tahapan dengan format tanggal fleksibel"""
+        try:
+
+            scan_mulai = DetailSPKFrame.parse_datetime(scan_mulai) if scan_mulai else None
+            scan_selesai = DetailSPKFrame.parse_datetime(scan_selesai) if scan_selesai else None
+            estimasi_selesai = DetailSPKFrame.parse_datetime(estimasi_selesai)
+
+            if scan_selesai and scan_selesai <= estimasi_selesai:
+                return "SELESAI", "#28a745"
+            elif scan_selesai and scan_selesai > estimasi_selesai:
+                return "TERLAMBAT", "#dc3545"
+            elif scan_mulai:
+                return "SEDANG BERJALAN", "#007bff"
+            else:
+                return "BELUM MULAI", "#6c757d"
+        except Exception as e:
+            # print(f"Error menentukan status: {e}\nMulai: {mulai}\nSelesai: {selesai}")
+            print(f"Error menentukan status: {e}")
+>>>>>>> 4a0cafa991840edf09b92b03c4629b02f790b674
             return "UNKNOWN", "#6c757d"
 
     def load_tracking_data(self):
@@ -464,4 +512,8 @@ class DetailSPKFrame(Frame):
                 values=(row[0], row[1] or "-", row[2] or "-", durasi, row[3] or "-"),
             )
 
+<<<<<<< HEAD
         conn.close()
+=======
+        conn.close()
+>>>>>>> 4a0cafa991840edf09b92b03c4629b02f790b674

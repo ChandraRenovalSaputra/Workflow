@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import platform
 
 class ScrollableFrame(ttk.Frame):
     def __init__(self, container, *args, **kwargs):
@@ -16,19 +17,26 @@ class ScrollableFrame(ttk.Frame):
             )
         )
 
-        self.window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
 
-        # Bind mousewheel to canvas (works on Windows)
-        self.bind_events()
+        self.bind_mousewheel()
 
-    def bind_events(self):
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+    def bind_mousewheel(self):
+        os_name = platform.system()
+        if os_name == 'Windows':
+            self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        elif os_name == 'Darwin':  # macOS
+            self.canvas.bind_all("<MouseWheel>", self._on_mousewheel_mac)
+        else:  # Linux
+            self.canvas.bind_all("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))
+            self.canvas.bind_all("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))
 
     def _on_mousewheel(self, event):
-        # Untuk Windows (event.delta kelipatan 120)
         self.canvas.yview_scroll(-1 * (event.delta // 120), "units")
+
+    def _on_mousewheel_mac(self, event):
+        self.canvas.yview_scroll(-1 * (event.delta), "units")
