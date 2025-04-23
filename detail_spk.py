@@ -9,8 +9,6 @@ import qrcode
 from datetime import datetime
 from io import BytesIO
 from tkinter import ttk
-import tkinter as tk
-
 
 def center_window(root, width=1600, height=800):
     """Menempatkan window di tengah layar"""
@@ -175,6 +173,7 @@ class DetailSPKFrame(Frame):
 
         # ISI
         if tahapan_data:
+            print(tahapan_data)
             self.keterangan_vars = []
 
             for row, (
@@ -185,9 +184,13 @@ class DetailSPKFrame(Frame):
                 scan_mulai,
                 scan_selesai,
             ) in enumerate(tahapan_data, start=1):
+
                 status, bg_color = self.tentukan_status(
-                    scan_mulai or estimasi_mulai, scan_selesai or estimasi_selesai
+                    scan_mulai,
+                    scan_selesai,
+                    estimasi_selesai
                 )
+
                 estimasi = (
                     f"{estimasi_mulai} - {estimasi_selesai}"
                     if estimasi_selesai
@@ -391,39 +394,25 @@ class DetailSPKFrame(Frame):
         except Exception as e:
             print(f"Error loading {title} image: {e}")
 
-    def tentukan_status(self, mulai, selesai):
+    def tentukan_status(self, scan_mulai, scan_selesai, estimasi_selesai):
         """Menentukan status tahapan dengan format tanggal fleksibel"""
         try:
-            mulai_dt = DetailSPKFrame.parse_datetime(mulai)
-            selesai_dt = (
-                DetailSPKFrame.parse_datetime(selesai)
-                if selesai and str(selesai).strip() != "-"
-                else None
-            )
 
-            today = datetime.now()
+            scan_mulai = DetailSPKFrame.parse_datetime(scan_mulai) if scan_mulai else None
+            scan_selesai = DetailSPKFrame.parse_datetime(scan_selesai) if scan_selesai else None
+            estimasi_selesai = DetailSPKFrame.parse_datetime(estimasi_selesai)
 
-            if not mulai_dt:
-                return "BELUM", "#6c757d"
-
-            if selesai_dt:
-                # Jika selesai sudah ada, artinya sudah dikerjakan
+            if scan_selesai and scan_selesai <= estimasi_selesai:
                 return "SELESAI", "#28a745"
-
-            elif today > mulai_dt:
-                # Sudah waktunya dikerjakan tapi belum selesai
-                return "SEDANG BERJALAN", "#007bff"
-
-            elif today < mulai_dt:
-                # Belum waktunya dikerjakan
-                return "BELUM", "#6c757d"
-
-            else:
-                # Lewat dari waktu tapi belum diselesaikan
+            elif scan_selesai and scan_selesai > estimasi_selesai:
                 return "TERLAMBAT", "#dc3545"
-
+            elif scan_mulai:
+                return "SEDANG BERJALAN", "#007bff"
+            else:
+                return "BELUM MULAI", "#6c757d"
         except Exception as e:
-            print(f"Error menentukan status: {e}\nMulai: {mulai}\nSelesai: {selesai}")
+            # print(f"Error menentukan status: {e}\nMulai: {mulai}\nSelesai: {selesai}")
+            print(f"Error menentukan status: {e}")
             return "UNKNOWN", "#6c757d"
 
     def load_tracking_data(self):
