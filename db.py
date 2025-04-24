@@ -121,7 +121,7 @@ def get_jadwal_pekerjaan():
     FROM spk s
     JOIN current_stages cs ON s.id = cs.spk_id AND cs.stage_priority = 1
     JOIN spk_status ss ON s.id = ss.spk_id -- Join dengan status
-    ORDER BY cs.target_selesai ASC
+    ORDER BY cs.spk_id DESC
     """
 
     cursor.execute(query)
