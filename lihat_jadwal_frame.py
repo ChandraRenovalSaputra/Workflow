@@ -4,6 +4,7 @@ from tkinter import Frame, Label, Button, ttk
 from db import get_jadwal_pekerjaan, get_workflow_conn, search_jadwal
 from detail_spk import show_spk_detail
 from datetime import datetime
+from scrollable_frame import ScrollableFrame
 
 
 class LihatJadwalFrame(Frame):
@@ -45,33 +46,10 @@ class LihatJadwalFrame(Frame):
         ).pack(side=LEFT)
 
         # 🧾 Scrollable Tabel
-        outer_frame = Frame(self, bg="white", bd=1, relief=GROOVE)
-        outer_frame.pack(padx=30, pady=10, fill=BOTH, expand=True)
+        scrollable = ScrollableFrame(self)
+        scrollable.pack(padx=30, pady=10, fill=BOTH, expand=True)
 
-        canvas = Canvas(outer_frame, bg="white", highlightthickness=0)
-        canvas.pack(side=LEFT, fill=BOTH, expand=True)
-
-        scrollbar = Scrollbar(outer_frame, orient=VERTICAL, command=canvas.yview)
-        scrollbar.pack(side=RIGHT, fill=Y)
-
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind(
-            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-
-        self.table_frame = Frame(canvas, bg="white")
-        canvas.create_window((0, 0), window=self.table_frame, anchor="nw")
-
-        canvas.bind_all(
-            "<MouseWheel>",
-            lambda event: canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"),
-        )  # Windows & MacOS
-        canvas.bind_all(
-            "<Button-4>", lambda event: canvas.yview_scroll(-1, "units")
-        )  # Linux scroll up
-        canvas.bind_all(
-            "<Button-5>", lambda event: canvas.yview_scroll(1, "units")
-        )  # Linux scroll down
+        self.table_frame = scrollable.scrollable_frame
 
         self.filter_var = StringVar()
         self.filter_var.set("semua")  # Defaultnya semua
@@ -119,6 +97,13 @@ class LihatJadwalFrame(Frame):
             command=self.open_scanner,
             padx=15,
         ).pack(side=LEFT, padx=10)
+        self.auto_refresh()
+
+    def auto_refresh(self):
+        self.refresh_table()
+        # Refresh setiap 60 detik (60000 milidetik)
+        self.after(60000, self.auto_refresh)
+
 
     def load_table(self, keyword=None, filter_status="semua"):
         if keyword is not None and keyword != "":
@@ -142,6 +127,16 @@ class LihatJadwalFrame(Frame):
 
         print(f"Data setelah filter status '{filter_status}': ", rows)
 
+        # 🔁 Ambil hanya tahap terakhir per SPK (berdasarkan waktu mulai terbaru)
+        filtered_rows = {}
+        for row in rows:
+            spk_id = row[1]  # Kolom ke-2 = SPK ID
+            if spk_id not in filtered_rows or row[5] > filtered_rows[spk_id][5]:  # Kolom ke-6 = waktu mulai
+                filtered_rows[spk_id] = row
+
+        rows = list(filtered_rows.values())
+
+
         headers = [
             "📝 Nama Pekerjaan",
             "🆔 ID",
@@ -152,7 +147,7 @@ class LihatJadwalFrame(Frame):
             "⏰ Deadline",
             "🔍 Aksi",
         ]
-        column_widths = [23, 15, 15, 17, 15, 15, 15, 12]
+        column_widths = [23, 15, 15, 17, 15, 15, 15, 8]
 
         # 🔶 Header
         for col, (text, width) in enumerate(zip(headers, column_widths)):
@@ -172,7 +167,7 @@ class LihatJadwalFrame(Frame):
             Label(
                 self.table_frame,
                 text="🔎 Tidak ada data ditemukan.",
-                font=("Segoe UI", 14),
+                font=("Segoe UI", 12),
                 bg="white",
                 fg="gray",
             ).grid(row=1, column=0, columnspan=len(headers), pady=40)
@@ -180,37 +175,37 @@ class LihatJadwalFrame(Frame):
 
         # 🔷 Baris data
         for i, row in enumerate(rows, start=1):
-            row_to_display = row[:3] + row[4:]  # Lewatkan status (index ke-3)
-            bg_color = "#f8f9fa" if i % 2 == 0 else "white"
+            row_to_display = row[:3] + row[4:]  # skip kolom ke-3 (status)
+
+            tag = self.get_row_tag(row[5], row[7])  # mulai = row[5], deadline = row[7]
+
+            if tag == "belum":
+                bg_color = "#f7f9fa"  
+            elif tag == "terlambat":
+                bg_color = "#ff6f61"  
+            elif tag == "warning":
+                bg_color = "#ffeb3b"  
+            elif tag == "sedang":
+                bg_color = "#00e676"  
+            else:
+                bg_color = "#a5d6a7"  
+
 
             for j, val in enumerate(row_to_display):
-                font_style = ("Segoe UI", 14)
-                if j == 3:  # Kolom Tahap
-                    Label(
-                        self.table_frame,
-                        text=val,
-                        bd=1,
-                        relief=RIDGE,
-                        width=column_widths[j],
-                        bg="#ffeaa7",
-                        fg="black",
-                        font=("Segoe UI", 14, "bold"),
-                        height=2,
-                    ).grid(row=i, column=j, sticky="nsew")
-                else:
-                    Label(
-                        self.table_frame,
-                        text=val,
-                        bd=1,
-                        relief=RIDGE,
-                        width=column_widths[j],
-                        bg=bg_color,
-                        anchor="w",
-                        font=font_style,
-                        height=2,
-                    ).grid(row=i, column=j, sticky="nsew")
+                font_style = ("Segoe UI", 14, "bold") if j == 3 else ("Segoe UI", 14)
+                Label(
+                    self.table_frame,
+                    text=val,
+                    bd=1,
+                    relief=RIDGE,
+                    width=column_widths[j],
+                    bg=bg_color,
+                    anchor="w",
+                    font=font_style,
+                    height=2,
+                ).grid(row=i, column=j, sticky="nsew")
 
-            # 🔘 Tombol Detail
+
             Button(
                 self.table_frame,
                 text="ℹ️ Detail",
@@ -222,6 +217,8 @@ class LihatJadwalFrame(Frame):
                 command=lambda sid=row[1]: self.lihat_detail(sid),
             ).grid(row=i, column=len(headers) - 1, sticky="nsew", ipadx=10, pady=2)
 
+
+
         # Responsif
         for col in range(len(headers)):
             self.table_frame.grid_columnconfigure(col, weight=1)
@@ -231,30 +228,43 @@ class LihatJadwalFrame(Frame):
         show_spk_detail(self.controller, spk_id)
 
     def get_row_tag(self, mulai, target):
-        """Determine row color based on status"""
-        if not mulai or mulai == "-":
-            return "belum"  # Abu-abu
+        """Tentukan tag warna berdasarkan status deadline"""
+        print(f"[DEBUG] Mulai: {mulai}, Target: {target}")  # log
+
+        if not mulai or mulai.strip() == "-":
+            return "belum"
 
         try:
-            if not target or target == "-":
-                return "normal"  # Putih
+            if not target or target.strip() == "-":
+                return "normal"
 
-            # Parse waktu
-            target_dt = datetime.strptime(target, "%d-%m-%Y %H:%M")
+            # Coba parsing waktu deadline
+            target_dt = datetime.strptime(target.strip(), "%d-%m-%Y %H:%M")
+            now = datetime.now()
 
-            if datetime.now() > target_dt:
-                return "terlambat"  # Merah muda
+            print(f"[DEBUG] Now: {now}, Deadline: {target_dt}")  # log waktu
 
-            if (target_dt - datetime.now()).total_seconds() < 12 * 3600:
-                return "warning"  # Kuning
+            if now > target_dt:
+                return "terlambat"
 
-            return "sedang"  # Kuning muda (sedang dikerjakan)
-        except:
+            if (target_dt - now).total_seconds() < 1 * 3600:
+                return "warning"
+
             return "normal"
+        except Exception as e:
+            print(f"[ERROR] Gagal parsing waktu: {e}")
+            return "normal"
+
 
     def search(self):
         keyword = self.search_var.get()
         self.load_table(keyword)
+
+    def refresh_table(self):
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        self.load_table()
+        self.update_idletasks()
 
     def open_scanner(self):
         from scanner_ui import ScannerApp
@@ -269,10 +279,6 @@ class LihatJadwalFrame(Frame):
 
         self.controller.switch_frame(DashboardFrame)
 
-    def refresh_table(self):
-        """Refresh the table with current data"""
-        self.load_table()
-        self.update_idletasks()  # Force UI update
 
     def filter_data(self):
         keyword = self.search_var.get()

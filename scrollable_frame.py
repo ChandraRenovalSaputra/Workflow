@@ -17,13 +17,23 @@ class ScrollableFrame(ttk.Frame):
             )
         )
 
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.create_window((self.winfo_reqwidth() // 2, 0), window=self.scrollable_frame, anchor="n")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.window_id = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="n")
+
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+
 
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
 
         self.bind_mousewheel()
+
+    def _on_canvas_configure(self, event):
+        canvas_width = event.width
+        self.canvas.itemconfig(self.window_id, width=canvas_width)
+
 
     def bind_mousewheel(self):
         os_name = platform.system()

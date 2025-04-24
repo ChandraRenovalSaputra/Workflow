@@ -98,6 +98,57 @@ class LoginFrame(tk.Frame):
         )
         entry.grid(row=row + 1, column=0, columnspan=2, pady=(0, 20))
         return entry
+    
+    def custom_messagebox(parent, title, message, type="error"):
+        top = tk.Toplevel(parent)
+        top.title(title)
+        top.transient(parent)
+        top.grab_set()
+        top.configure(bg="white")
+
+        # Ukuran dan posisi (diperbesar)
+        w, h = 600, 400
+        x = parent.winfo_rootx() + (parent.winfo_width() // 2) - (w // 2)
+        y = parent.winfo_rooty() + (parent.winfo_height() // 2) - (h // 2)
+        top.geometry(f"{w}x{h}+{x}+{y}")
+        top.resizable(False, False)
+
+        # Warna dan ikon
+        if type == "error":
+            icon_text = "❌"
+            icon_color = "#e74c3c"
+        else:
+            icon_text = "ℹ️"
+            icon_color = "#3498db"
+
+        # Container Frame dengan padding
+        container = tk.Frame(top, bg="white", padx=20, pady=20)
+        container.pack(expand=True, fill="both")
+
+        # Icon
+        icon_label = tk.Label(container, text=icon_text, font=("Segoe UI", 60), bg="white", fg=icon_color)
+        icon_label.pack(pady=(10, 10))
+
+        # Message
+        msg_label = tk.Label(container, text=message, font=("Segoe UI", 16), bg="white", fg="#2c3e50", wraplength=w-80, justify="center")
+        msg_label.pack(pady=(0, 20))
+
+        # OK Button
+        ok_button = tk.Button(container, text="OK", command=top.destroy,
+                            bg="#0078D7", fg="white", font=("Segoe UI", 16, "bold"),
+                            relief="flat", padx=40, pady=10, activebackground="#005a9e", cursor="hand2")
+        ok_button.pack(pady=(0, 10))
+
+        # Tambah efek hover
+        def on_enter(e):
+            ok_button['bg'] = "#005a9e"
+        def on_leave(e):
+            ok_button['bg'] = "#0078D7"
+        
+        ok_button.bind("<Enter>", on_enter)
+        ok_button.bind("<Leave>", on_leave)
+
+        top.wait_window()
 
     def login(self):
         username = self.username_entry.get()
@@ -108,4 +159,4 @@ class LoginFrame(tk.Frame):
             self.unbind_all("<Return>")
             self.controller.switch_frame(DashboardFrame)
         else:
-            messagebox.showerror("Login Gagal", "Username atau password salah.")
+            self.custom_messagebox("Login Gagal", "Username atau password salah.")

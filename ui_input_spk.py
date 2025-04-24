@@ -16,6 +16,12 @@ import subprocess
 from tkinter import messagebox, filedialog
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import Paragraph
+from reportlab.lib.units import cm
+from reportlab.lib import colors
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -148,7 +154,7 @@ class SPKInputFrame(tk.Frame):
         frame = tk.Frame(self.container)
         frame.pack(fill="x", pady=3, padx=20)
 
-        label = tk.Label(frame, text=label_text, width=25, anchor="w")
+        label = tk.Label(frame, text=label_text, width=25, anchor="w", font=("Segoe UI", 14, "bold"))
         label.pack(side="left")
 
         if input_type == "date":
@@ -177,11 +183,11 @@ class SPKInputFrame(tk.Frame):
                 state="readonly",
                 width=20,
                 style="my.DateEntry",
-                font=("Segoe UI", 11)
+                font=("Segoe UI", 14)
             )
 
         else:
-            entry = tk.Entry(frame)
+            entry = tk.Entry(frame, font=("Segoe UI", 14)) 
         entry.pack(side="left", fill="x", expand=True)
 
         self.entries[label_text] = entry
@@ -329,7 +335,7 @@ class SPKInputFrame(tk.Frame):
             messagebox.showerror("Gagal Simpan", f"Gagal menyimpan data SPK:\n{e}\n\n{tb}")
 
     def generate_pdf(self, spk_id, desain_path, dummy_path, filename):
-        """Fungsi untuk membuat PDF SPK"""
+        """Fungsi untuk membuat PDF SPK dengan tampilan profesional"""
         os.makedirs("spk_output", exist_ok=True)
         filepath = os.path.join("spk_output", filename)
 
@@ -343,104 +349,125 @@ class SPKInputFrame(tk.Frame):
             data = dict(zip(col_names, row)) if row else {}
             conn.close()
 
-            # Buat PDF
+            # Siapkan PDF
             c = canvas.Canvas(filepath, pagesize=A4)
             width, height = A4
-            margin_x, margin_y = 50, 50
+            margin_x, margin_y = 2 * cm, 2 * cm
             y = height - margin_y
 
-            # Header
-            c.setFont("Helvetica-Bold", 18)
-            c.drawCentredString(width / 2, y, "SURAT PERINTAH KERJA")
-            y -= 10
+            # Judul utama
+            c.setFont("Helvetica-Bold", 16)
+            c.drawCentredString(width / 2, y, "SURAT PERINTAH KERJA (SPK)")
+            y -= 20
             c.setLineWidth(1)
             c.line(margin_x, y, width - margin_x, y)
             y -= 30
 
-            # SPK Info 2 kolom
-            c.setFont("Helvetica", 10)
-            left_x = margin_x
-            right_x = width / 2 + 10
-            spacing = 15
+            # Style untuk judul dalam tabel
+            title_style = ParagraphStyle(
+                name='CenterTitle',
+                fontName='Helvetica-Bold',
+                fontSize=12,
+                textColor=colors.white,
+                alignment=TA_CENTER
+            )
 
-            info_kiri = [
-                ("ORDER SALES", data.get("order_sales", "")),
-                ("NO PO", data.get("no_po", "")),
-                ("CUSTOMER", data.get("costumer", "")),
-                ("NAMA ARTIKEL", data.get("nama_artikel", "")),
-                ("QTY", data.get("qty", "")),
-                ("TANGGAL KIRIM", data.get("tanggal_kirim", ""))
+            # --- Tabel Keterangan Produk ---
+            info_umum_data = [
+                [Paragraph("Keterangan Produk", title_style), ""],
+                ["Nomor SPK", f"SPK-{data.get('id', '')}"],
+                ["Tanggal Kirim", data.get("tanggal_kirim", "")],
+                ["Customer", data.get("costumer", "")],
+                ["Order Sales", data.get("order_sales", "")],
+                ["No PO", data.get("no_po", "")],
+                ["Nama Artikel", data.get("nama_artikel", "")]
             ]
 
-            info_kanan = [
-                ("JENIS BAHAN", data.get("jenis_bahan", "")),
-                ("QTY BAHAN", data.get("qty_bahan", "")),
-                ("UKURAN CETAK", data.get("ukuran_cetak", "")),
-                ("JUMLAH CETAK", data.get("jumlah_cetak", "")),
-                ("INSHEET", data.get("insheet", "")),
-                ("TOTAL CETAK", data.get("total_cetak", "")),
-                ("WARNA", data.get("warna", "")),
-                ("VARNISH", data.get("varnish", "")),
-                ("FINISHING", data.get("finishing", ""))
+            col_widths = [5 * cm, 10 * cm]
+            total_table_width = sum(col_widths)
+            table_x = (width - total_table_width) / 2  # center align table
+
+            info_umum_table = Table(info_umum_data, colWidths=col_widths)
+            info_umum_table.setStyle(TableStyle([
+                ('SPAN', (0, 0), (1, 0)),
+                ('BACKGROUND', (0, 0), (1, 0), colors.black),
+                ('TEXTCOLOR', (0, 0), (1, 0), colors.white),
+                ('FONT', (0, 0), (-1, -1), 'Helvetica', 11),
+                ('GRID', (0, 1), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+
+            w, h = info_umum_table.wrapOn(c, width, y)
+            info_umum_table.drawOn(c, table_x, y - h)
+            y -= h + 30
+
+            # --- Tabel Spesifikasi Produk ---
+            table_data = [
+                [Paragraph("Spesifikasi Produk", title_style), ""],
+                ["Jenis Bahan", data.get("jenis_bahan", "")],
+                ["Qty Bahan", data.get("qty_bahan", "")],
+                ["Ukuran Cetak", data.get("ukuran_cetak", "")],
+                ["Jumlah Cetak", data.get("jumlah_cetak", "")],
+                ["Insheet", data.get("insheet", "")],
+                ["Total Cetak", data.get("total_cetak", "")],
+                ["Warna", data.get("warna", "")],
+                ["Varnish", data.get("varnish", "")],
+                ["Finishing", data.get("finishing", "")]
             ]
 
-            for label, value in info_kiri:
-                c.drawString(left_x, y, f"{label:<15}: {value}")
-                y -= spacing
+            table = Table(table_data, colWidths=col_widths)
+            table.setStyle(TableStyle([
+                ('SPAN', (0, 0), (1, 0)),
+                ('BACKGROUND', (0, 0), (1, 0), colors.black),
+                ('TEXTCOLOR', (0, 0), (1, 0), colors.white),
+                ('FONT', (0, 0), (-1, -1), 'Helvetica', 11),
+                ('GRID', (0, 1), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
 
-            # Geser kanan dan mulai dari atas untuk kolom kanan
-            y2 = height - margin_y - 60
-            for label, value in info_kanan:
-                c.drawString(right_x, y2, f"{label:<15}: {value}")
-                y2 -= spacing
+            w, h = table.wrapOn(c, width, y)
+            table.drawOn(c, table_x, y - h)
+            y -= h + 30
 
-            # Gambar: desain, barcode, dummy
-            y_img = min(y, y2) - 40
+            # Gambar
             try:
                 from reportlab.lib.utils import ImageReader
-
-                # Generate barcode sementara
                 barcode_path = f"temp_barcode_{spk_id}.png"
                 qr = qrcode.make(f"SPK-{spk_id}")
                 qr.save(barcode_path)
 
-                # Gambar desain
+                img_width = 4 * cm
+                spacing_img = 2 * cm  # bisa diatur sesuai selera
+                images = []
+
                 if desain_path and os.path.exists(desain_path):
-                    c.drawImage(desain_path, 50, y-100, width=100, height=100)
-
-                # Gambar barcode
+                    images.append(("Desain", desain_path))
                 if os.path.exists(barcode_path):
-                    c.drawImage(barcode_path, 170, y-100, width=100, height=100)
-                    os.remove(barcode_path)  # Hapus file sementara
-
-                # Gambar dummy
+                    images.append(("Barcode", barcode_path))
                 if dummy_path and os.path.exists(dummy_path):
-                    c.drawImage(dummy_path, 290, y-100, width=100, height=100)
+                    images.append(("Dummy", dummy_path))
 
-                # Lebar gambar tetap
-                img_width = 100
-                spacing_img = 120
+                total_width = len(images) * img_width + (len(images) - 1) * spacing_img
+                img_x = (width - total_width) / 2  # Mulai dari tengah
+                img_y = y - img_width
 
-                img_x = margin_x
-                label_y = y_img - img_width - 12
+                for label, path in images:
+                    c.drawImage(path, img_x, img_y, width=img_width, height=img_width)
+                    c.drawCentredString(img_x + img_width / 2, img_y - 12, label)
+                    img_x += img_width + spacing_img
 
-                if desain_path and os.path.exists(desain_path):
-                    c.drawImage(desain_path, img_x, y_img - img_width, width=img_width, height=img_width)
-                    c.drawCentredString(img_x + img_width / 2, label_y, "Desain")
-                    img_x += spacing_img
-
+                # Hapus barcode setelah selesai dipakai
                 if os.path.exists(barcode_path):
-                    c.drawImage(barcode_path, img_x, y_img - img_width, width=img_width, height=img_width)
-                    c.drawCentredString(img_x + img_width / 2, label_y, "Barcode")
                     os.remove(barcode_path)
-                    img_x += spacing_img
-
-                if dummy_path and os.path.exists(dummy_path):
-                    c.drawImage(dummy_path, img_x, y_img - img_width, width=img_width, height=img_width)
-                    c.drawCentredString(img_x + img_width / 2, label_y, "Dummy")
 
             except Exception as e:
                 print(f"Error adding images to PDF: {e}")
+
+
+            # Footer
+            footer_y = 2.5 * cm
+            c.setFont("Helvetica", 9)
+            c.drawString(margin_x, footer_y, "Dokumen ini dicetak secara otomatis. Harap digunakan sesuai prosedur perusahaan.")
 
             # Selesai
             c.save()
@@ -502,17 +529,17 @@ class SPKInputFrame(tk.Frame):
             "POND", "FORMING", "LAMINATING", "PACKING", "PENGIRIMAN", "DITERIMA COSTUMER"
         ]
 
-        label_font = ("Arial", 16, "bold")
-        entry_font = ("Arial", 16)
+        label_font = ("Arial", 14, "bold")
+        entry_font = ("Arial", 14)
 
         # Baris input
-        tk.Label(tambah_frame, text="Tahapan:", font=label_font, bg="#ffffff").grid(row=0, column=0, padx=12, pady=10, sticky="w")
+        tk.Label(tambah_frame, text="Tahapan:", font=label_font, bg="#ffffff").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.selected_tahapan = ttk.Combobox(
             tambah_frame,
             values=self.tahapan_options,
             state="readonly",
             width=25,
-            font=("Arial", 16),
+            font=("Arial", 14),
             style="Big.TCombobox"  # pakai style besar
         )
 
@@ -560,10 +587,10 @@ class SPKInputFrame(tk.Frame):
         self.estimasi_table.heading("Selesai", text="Selesai", anchor="center")
         self.estimasi_table.heading("Aksi", text="Aksi", anchor="center")
 
-        self.estimasi_table.column("Tahap", width=350, anchor="center")
-        self.estimasi_table.column("Mulai", width=350, anchor="center")
-        self.estimasi_table.column("Selesai", width=350, anchor="center")
-        self.estimasi_table.column("Aksi", width=350, anchor="center")
+        self.estimasi_table.column("Tahap", width=300, anchor="center")
+        self.estimasi_table.column("Mulai", width=300, anchor="center")
+        self.estimasi_table.column("Selesai", width=300, anchor="center")
+        self.estimasi_table.column("Aksi", width=300, anchor="center")
 
         self.estimasi_table.pack(pady=20, padx=30)
         self.estimasi_rows = {}
