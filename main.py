@@ -3,6 +3,8 @@ from tkinter import ttk
 from ui_login import LoginFrame
 from db import create_tables, create_spk_tables
 from db import tambah_colom_db
+from multi_scanner_listener import start_all_scanners
+import threading
 
 create_tables()
 create_spk_tables()
@@ -68,8 +70,14 @@ class App(tk.Tk):
             lambda parent, controller: SPKPreviewFrame(parent, controller, spk_id)
         )
 
+def run_scanner_listener():
+        start_all_scanners()
 
 if __name__ == "__main__":
-    tambah_colom_db()
+    # Jalankan scanner listener lebih dulu
+    scanner_thread = threading.Thread(target=run_scanner_listener, daemon=True)
+    scanner_thread.start()
+
+    # Lalu jalankan aplikasi
     app = App()
     app.mainloop()
