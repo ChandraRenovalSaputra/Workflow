@@ -26,76 +26,92 @@ class SPKPreviewFrame(tk.Frame):
         return dict(zip(col, row)) if row else {}
 
     def build_ui(self):
-        # Header (di luar scroll)
-        header = tk.Label(self, text="📝 SURAT PERINTAH KERJA", font=("Helvetica", 24, "bold"),
-                          bg="#f7f9fb", fg="#2c3e50")
+        # Header
+        header = tk.Label(self, text="📝 SURAT PERINTAH KERJA",
+                        font=("Segoe UI", 24, "bold"),
+                        bg="#f7f9fb", fg="#2c3e50")
         header.pack(pady=25)
 
         # Scrollable content
         scroll = ScrollableFrame(self)
-        scroll.pack(fill="both", expand=True, padx=40, pady=(0, 20))
+        scroll.pack(fill="both", expand=True)
         content_frame = scroll.scrollable_frame
+        content_frame.configure(bg="#f7f9fb")
+
+        # Gunakan grid agar container bisa dipusatkan
+        content_frame.grid_columnconfigure(0, weight=1)
+
+        container = tk.Frame(content_frame, bg="white")
+        container.grid(row=0, column=0, padx=60, pady=30, ipadx=20, ipady=20, sticky="n")
+
 
         # Section Title
-        section_title = tk.Label(content_frame, text="📄 Detail Informasi SPK",
-                                 font=("Helvetica", 14, "bold"), bg="white", fg="#34495e")
-        section_title.pack(pady=(15, 0), anchor="w", padx=20)
+        section_title = tk.Label(container, text="📄 Detail Informasi SPK",
+                                font=("Segoe UI", 16, "bold"),
+                                bg="white", fg="#34495e")
+        section_title.pack(pady=(10, 15))
 
-        info_items = [
+        # Informasi SPK
+        info_frame = tk.Frame(container, bg="#ffffff")
+        info_frame.pack(padx=20, pady=10, fill="x")
+
+        for i, (label_text, key) in enumerate([
             ("ORDER SALES", "order_sales"), ("NO PO", "no_po"), ("COSTUMER", "costumer"),
             ("NAMA ARTIKEL", "nama_artikel"), ("QTY", "qty"), ("TANGGAL KIRIM", "tanggal_kirim"),
             ("JENIS BAHAN", "jenis_bahan"), ("QTY BAHAN", "qty_bahan"),
             ("UKURAN CETAK", "ukuran_cetak"), ("JUMLAH CETAK", "jumlah_cetak"),
             ("INSHEET", "insheet"), ("TOTAL CETAK", "total_cetak"),
             ("WARNA", "warna"), ("VARNISH", "varnish"), ("FINISHING", "finishing"),
-        ]
+        ]):
+            tk.Label(info_frame, text=f"{label_text}        :", font=("Segoe UI", 11, "bold"),
+                    bg="white", anchor="w", width=20).grid(row=i, column=0, sticky="w", pady=4, padx=10)
+            tk.Label(info_frame, text=self.data.get(key, "-"), font=("Segoe UI", 11),
+                    bg="white", anchor="w").grid(row=i, column=1, sticky="w", pady=4)
 
-        info_frame = tk.Frame(content_frame, bg="white", bd=3, relief="solid")
-        info_frame.pack(padx=10, pady=10, fill="x")
+        # Gambar & Barcode
+        section_images = tk.Label(container, text="🖼️ Gambar & Barcode",
+                                font=("Segoe UI", 16, "bold"), bg="white", fg="#34495e")
+        section_images.pack(pady=(30, 10))
 
-        for i, (label_text, key) in enumerate(info_items):
-            tk.Label(info_frame, text=f"{label_text} :", font=("Helvetica", 11, "bold"),
-                     bg="white", anchor="w", width=18).grid(row=i, column=0, sticky="w", pady=3, padx=10)
-            tk.Label(info_frame, text=self.data.get(key, "-"), font=("Helvetica", 11),
-                     bg="white", anchor="w").grid(row=i, column=1, sticky="w", pady=3)
-
-        # Image & Barcode Section
-        section_images = tk.Label(content_frame, text="🖼️ Gambar & Barcode",
-                                  font=("Helvetica", 14, "bold"), bg="white", fg="#34495e")
-        section_images.pack(pady=(20, 5), anchor="w", padx=20)
-
-        img_frame = tk.Frame(content_frame, bg="white")
+        img_frame = tk.Frame(container, bg="white")
         img_frame.pack(pady=10)
 
         self.show_image(img_frame, self.data.get('gambar_desain'), "Desain")
         self.generate_and_show_barcode(img_frame)
         self.show_image(img_frame, self.data.get('gambar_dummy'), "Dummy")
 
-        # Back Button (masih di dalam scroll agar tetap ikut scroll ke bawah)
-        btn_frame = tk.Frame(content_frame, bg="white")
-        btn_frame.pack(pady=30)
-        back_button = tk.Button(btn_frame, text="⬅️ Kembali ke Dashboard", font=("Helvetica", 12, "bold"),
-                                bg="#27ae60", fg="white", padx=20, pady=8,
+        # Tombol kembali
+        btn_frame = tk.Frame(container, bg="white")
+        btn_frame.pack(pady=40)
+
+        back_button = tk.Button(btn_frame, text="⬅️ Kembali ke Dashboard",
+                                font=("Segoe UI", 12, "bold"),
+                                bg="#27ae60", fg="white", padx=30, pady=10,
+                                relief="flat", cursor="hand2",
                                 command=lambda: self.controller.switch_frame(DashboardFrame))
         back_button.pack()
 
+
+
     def show_image(self, parent, path, label):
-        frame = tk.Frame(parent, bg="white")
-        frame.pack(side="left", padx=30)
+        frame = tk.Frame(parent, bg="white", bd=2, relief="groove")
+        frame.pack(side="left", padx=20, pady=10)
 
         if path and os.path.exists(path):
             img = Image.open(path)
-            img.thumbnail((160, 160))
+            img.thumbnail((180, 180))
             photo = ImageTk.PhotoImage(img)
             label_image = tk.Label(frame, image=photo, bg="white")
-            label_image.pack()
-            frame.image = photo  # Keep a reference
+            label_image.image = photo  # Keep a reference
+            label_image.pack(pady=5)
         else:
-            label_image = tk.Label(frame, text="[Gambar Tidak Ada]", bg="white", fg="gray", font=("Helvetica", 10, "italic"))
-            label_image.pack()
+            label_image = tk.Label(frame, text="[Gambar Tidak Ada]", bg="white", fg="gray",
+                                font=("Segoe UI", 10, "italic"))
+            label_image.pack(pady=20)
 
-        label_name = tk.Label(frame, text=label, bg="white", font=("Helvetica", 11, "bold"))
+        label_name = tk.Label(frame, text=label, bg="white", font=("Segoe UI", 11, "bold"))
         label_name.pack(pady=5)
+
 
     def generate_and_show_barcode(self, parent):
         barcode_path = f"barcode_spk_{self.spk_id}.png"
