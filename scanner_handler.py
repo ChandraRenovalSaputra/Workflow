@@ -11,7 +11,7 @@ class BarcodeScanner:
         # Cek apakah SPK tersedia
         cursor.execute("SELECT id FROM spk WHERE id = ?", (spk_id,))
         if not cursor.fetchone():
-            return {"status": "error", "message": f"SPK {spk_id} tidak ditemukan"}
+            return {"status": "error", "message": f"❌ SPK {spk_id} tidak ditemukan"}
 
         now = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
@@ -24,26 +24,29 @@ class BarcodeScanner:
         record = cursor.fetchone()
 
         if not record:
-            # Belum ada tracking, mulai tahapan baru
+            # Belum ada tracking → catat waktu mulai
             cursor.execute("""
                 INSERT INTO spk_tracking (spk_id, tahapan, scan_mulai)
                 VALUES (?, ?, ?)
             """, (spk_id, tahapan, now))
-            message = f"✅ {tahapan} DIMULAI\nSPK-{spk_id}"
-        elif record[2] is None:
-            # Sudah mulai tapi belum selesai, update waktu selesai
+            message = f"{tahapan} DIMULAI\nSPK-{spk_id}"
+        elif record[1] and not record[2]:
+            # Sudah mulai tapi belum selesai → catat waktu selesai
             cursor.execute("""
                 UPDATE spk_tracking
                 SET scan_selesai = ? WHERE id = ?
             """, (now, record[0]))
-            message = f"✅ {tahapan} SELESAI\nSPK-{spk_id}"
+            message = f"{tahapan} SELESAI\nSPK-{spk_id}"
+        elif record[1] and record[2]:
+            # Sudah selesai → scan diabaikan
+            return {"status": "info", "message": f"🔒 {tahapan} sudah selesai untuk SPK-{spk_id}. Scan diabaikan."}
         else:
-            # Sudah selesai dan tidak ada perubahan (scan ke-3 atau seterusnya diabaikan)
-            return {"status": "success", "message": f"✅ {tahapan} sudah selesai, tidak ada perubahan lebih lanjut."}
+            # Tidak valid (harusnya tidak terjadi)
+            return {"status": "error", "message": "❌ Data tidak valid."}
 
         try:
             self.conn.commit()
-            return {"status": "success", "message": message}
+            return {"status": "success", "message": f"✅ {message}"}
         except Exception as e:
             self.conn.rollback()
             return {"status": "error", "message": f"DB Error: {e}"}

@@ -71,13 +71,11 @@ class App(tk.Tk):
         )
 
 def run_scanner_listener():
-        start_all_scanners()
+    start_all_scanners()
 
 if __name__ == "__main__":
-    # Jalankan scanner listener lebih dulu
     scanner_thread = threading.Thread(target=run_scanner_listener, daemon=True)
     scanner_thread.start()
 
-    # Lalu jalankan aplikasi
     app = App()
     app.mainloop()
