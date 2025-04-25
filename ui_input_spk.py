@@ -23,6 +23,10 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph
 from reportlab.lib.units import cm
 from reportlab.lib import colors
+import locale
+
+# Set locale ke Indonesia
+locale.setlocale(locale.LC_TIME, 'Indonesian')  # Untuk Windows
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -171,32 +175,29 @@ class SPKInputFrame(tk.Frame):
         label.pack(side="left")
 
         if input_type == "date":
-            # Custom style for DateEntry
             style = ttk.Style()
             style.theme_use("default")
-
-            style.configure(
-                "my.DateEntry",
-                fieldbackground="white",
-                background="#0078D7",
-                foreground="black",
-                arrowcolor="white",
-                bordercolor="#ccc",
-                lightcolor="#0078D7",
-                darkcolor="#005a9e",
-                relief="flat",
-                padding=5
-            )
+            style.configure("my.DateEntry", 
+                          fieldbackground="white",
+                          background="#0078D7",
+                          foreground="black",
+                          arrowcolor="white",
+                          bordercolor="#ccc",
+                          lightcolor="#0078D7",
+                          darkcolor="#005a9e",
+                          relief="flat",
+                          padding=5)
 
             today = datetime.today().date()
             entry = DateEntry(
                 frame,
-                date_pattern='yyyy-mm-dd',
+                date_pattern='dd-mm-yyyy',
                 mindate=today,
                 state="readonly",
                 width=20,
                 style="my.DateEntry",
-                font=("Segoe UI", 14)
+                font=("Segoe UI", 14),
+                locale='id_ID'  # Format tanggal Indonesia
             )
 
         else:
