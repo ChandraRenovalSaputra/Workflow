@@ -747,3 +747,8 @@ class SPKInputFrame(tk.Frame):
         if self.dummy_label:
             self.dummy_label.configure(image="")
             self.dummy_temp_path = None
+
+    def potong_bahan(self):
+        if self.dummy_label:
+            self.dummy_label.configure(image="")
+            self.dummy_temp_path = None
