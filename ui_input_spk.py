@@ -1,3 +1,4 @@
+import sqlite3
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
@@ -32,7 +33,8 @@ class SPKInputFrame(tk.Frame):
         self.dummy_temp_path = None
         self.gambar_desain = None
         self.gambar_dummy = None
-
+        self.potong_temp_path = None
+        self.gambar_potong = None
         self.configure(bg="#f0f2f5")
 
         # ===== Scrollable Frame =====
@@ -103,6 +105,17 @@ class SPKInputFrame(tk.Frame):
 
         tk.Button(button_frame_dummy, text="Pilih File", command=self.upload_dummy, bg="#007BFF", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)  
         tk.Button(button_frame_dummy, text="Hapus File", command=self.remove_dummy, bg="#F44336", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)  
+
+        # Upload Gambar Potong Bahan
+        tk.Label(upload_frame, text="Upload Gambar Potong Bahan:", bg="#f0f2f5", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(10, 2))
+        self.potong_label = tk.Label(upload_frame, text="Belum ada file", fg="gray", bg="#f0f2f5", font=11)
+        self.potong_label.pack(anchor="w")
+
+        button_frame_potong = tk.Frame(upload_frame, bg="#f0f2f5")
+        button_frame_potong.pack(fill="x", pady=10)
+
+        tk.Button(button_frame_potong, text="Pilih File", command=self.upload_potong, bg="#007BFF", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)  
+        tk.Button(button_frame_potong, text="Hapus File", command=self.remove_potong, bg="#F44336", fg="white", font=("Segoe UI", 10, "bold"), relief="flat").pack(side="left", padx=10)
 
         # ===== Estimasi Tahapan =====
         self.build_estimasi_section()
@@ -230,6 +243,7 @@ class SPKInputFrame(tk.Frame):
         # Inisialisasi path
         gambar_desain_path = None
         gambar_dummy_path = None
+        gambar_potong_path = None  # ✅ BARU
 
         # Salin file gambar ke direktori tujuan
         try:
@@ -248,22 +262,35 @@ class SPKInputFrame(tk.Frame):
                 gambar_dummy_path = os.path.join(images_dir, filename)
                 shutil.copy(self.dummy_temp_path, gambar_dummy_path)
 
+            # ✅ Tambahkan salin gambar potong bahan jika ada
+            if self.potong_temp_path:
+                ext = os.path.splitext(self.potong_temp_path)[1]
+                filename = f"potong_{int(time.time())}{ext}"
+                gambar_potong_path = os.path.join(images_dir, filename)
+                shutil.copy(self.potong_temp_path, gambar_potong_path)
+
         except Exception as e:
             messagebox.showerror("Gagal Salin Gambar", f"Gagal menyalin file gambar: {e}")
             return
 
-        # Simpan ke database
+       # Simpan ke database
         try:
             conn = get_workflow_conn()
             c = conn.cursor()
 
-            # Insert data SPK tanpa barcode dulu
+            # Pastikan semua path gambar valid
+            gambar_desain_path = gambar_desain_path if gambar_desain_path and os.path.exists(gambar_desain_path) else None
+            gambar_dummy_path = gambar_dummy_path if gambar_dummy_path and os.path.exists(gambar_dummy_path) else None
+            gambar_potong_path = gambar_potong_path if gambar_potong_path and os.path.exists(gambar_potong_path) else None
+
+            # Insert data SPK
             c.execute('''
                 INSERT INTO spk (
                     order_sales, no_po, costumer, nama_artikel, qty, tanggal_kirim,
                     jenis_bahan, qty_bahan, ukuran_cetak, jumlah_cetak, insheet,
-                    total_cetak, warna, varnish, finishing, gambar_desain, gambar_dummy
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    total_cetak, warna, varnish, finishing,
+                    gambar_desain, gambar_dummy, gambar_potong
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data["ORDER SALES"],
                 data["NO PO"],
@@ -281,7 +308,8 @@ class SPKInputFrame(tk.Frame):
                 data["VARNISH"],
                 data["FINISHING"],
                 gambar_desain_path,
-                gambar_dummy_path
+                gambar_dummy_path,
+                gambar_potong_path
             ))
             spk_id = c.lastrowid
 
@@ -297,12 +325,10 @@ class SPKInputFrame(tk.Frame):
             qr.make(fit=True)
             barcode_img = qr.make_image(fill_color="black", back_color="white")
 
-            # Convert image to BLOB
             img_byte_arr = io.BytesIO()
             barcode_img.save(img_byte_arr, format='PNG')
             barcode_blob = img_byte_arr.getvalue()
 
-            # Update SPK dengan data barcode
             c.execute('''
                 UPDATE spk 
                 SET barcode_data = ?, barcode_image = ?
@@ -318,21 +344,41 @@ class SPKInputFrame(tk.Frame):
 
             conn.commit()
 
-            # Generate nama file PDF berdasarkan costumer dan nama artikel
+            # Generate PDF
             costumer = data["COSTUMER"].replace(" ", "_")
             artikel = data["NAMA ARTIKEL"].replace(" ", "_")
             pdf_filename = f"{costumer}_{artikel}.pdf"
-
-            # Buat PDF otomatis
-            self.generate_pdf(spk_id, gambar_desain_path, gambar_dummy_path, pdf_filename)
+            
+            try:
+                self.generate_pdf(spk_id, gambar_desain_path, gambar_dummy_path, pdf_filename)
+            except Exception as e:
+                print(f"Error generating PDF: {e}")
+                # Lanjutkan meskipun PDF gagal dibuat
 
             conn.close()
 
+            # Pastikan matplotlib menggunakan backend yang benar sebelum show_preview_frame
+            import matplotlib
+            matplotlib.use('Agg')
+            
             self.controller.show_preview_frame(spk_id)
 
+        except sqlite3.Error as e:
+            error_msg = f"Database Error:\n{str(e)}"
+            messagebox.showerror("Database Error", error_msg)
+            print(traceback.format_exc())
         except Exception as e:
-            tb = traceback.format_exc()
-            messagebox.showerror("Gagal Simpan", f"Gagal menyimpan data SPK:\n{e}\n\n{tb}")
+            error_msg = f"Gagal menyimpan SPK:\n{str(e)}\n\n"
+            error_msg += "Pastikan:\n"
+            error_msg += "1. Semua field wajib diisi\n"
+            error_msg += "2. Gambar yang diupload valid\n"
+            error_msg += "3. Database tersedia dan tidak terkunci"
+            messagebox.showerror("Gagal Simpan", error_msg)
+            print(traceback.format_exc())
+        finally:
+            if 'conn' in locals():
+                conn.close()
+
 
     def generate_pdf(self, spk_id, desain_path, dummy_path, filename):
         """Fungsi untuk membuat PDF SPK dengan tampilan profesional"""
@@ -430,6 +476,7 @@ class SPKInputFrame(tk.Frame):
             y -= h + 30
 
             # Gambar
+            # Ganti bagian kode gambar dengan yang berikut ini:
             try:
                 from reportlab.lib.utils import ImageReader
                 barcode_path = f"temp_barcode_{spk_id}.png"
@@ -437,24 +484,50 @@ class SPKInputFrame(tk.Frame):
                 qr.save(barcode_path)
 
                 img_width = 4 * cm
-                spacing_img = 2 * cm  # bisa diatur sesuai selera
-                images = []
+                spacing_img = 2 * cm
+                images_row1 = []
+                images_row2 = []
 
+                # Baris pertama: desain, dummy, potong
                 if desain_path and os.path.exists(desain_path):
-                    images.append(("Desain", desain_path))
-                if os.path.exists(barcode_path):
-                    images.append(("Barcode", barcode_path))
+                    images_row1.append(("Desain", desain_path))
                 if dummy_path and os.path.exists(dummy_path):
-                    images.append(("Dummy", dummy_path))
+                    images_row1.append(("Dummy", dummy_path))
+                if 'gambar_potong' in data and data['gambar_potong'] and os.path.exists(data['gambar_potong']):
+                    images_row1.append(("Potong Bahan", data['gambar_potong']))
 
-                total_width = len(images) * img_width + (len(images) - 1) * spacing_img
-                img_x = (width - total_width) / 2  # Mulai dari tengah
-                img_y = y - img_width
+                # Baris kedua: kosong, barcode, kosong
+                if os.path.exists(barcode_path):
+                    images_row2.append((None, None))  # Tempat kosong kiri
+                    images_row2.append(("Barcode", barcode_path))
+                    images_row2.append((None, None))  # Tempat kosong kanan
 
-                for label, path in images:
-                    c.drawImage(path, img_x, img_y, width=img_width, height=img_width)
-                    c.drawCentredString(img_x + img_width / 2, img_y - 12, label)
-                    img_x += img_width + spacing_img
+                # Hitung total lebar untuk penempatan tengah
+                total_width_row1 = len(images_row1) * img_width + (len(images_row1) - 1) * spacing_img
+                total_width_row2 = 3 * img_width + 2 * spacing_img  # Selalu 3 kolom (kosong-barcode-kosong)
+
+                # Gambar baris pertama
+                img_x_row1 = (width - total_width_row1) / 2
+                img_y_row1 = y - img_width
+                
+                for label, path in images_row1:
+                    if path:  # Hanya gambar yang ada
+                        c.drawImage(path, img_x_row1, img_y_row1, width=img_width, height=img_width)
+                        c.drawCentredString(img_x_row1 + img_width / 2, img_y_row1 - 12, label)
+                    img_x_row1 += img_width + spacing_img
+
+                # Gambar baris kedua (jika ada barcode)
+                if len(images_row2) > 0:
+                    img_x_row2 = (width - total_width_row2) / 2
+                    img_y_row2 = img_y_row1 - img_width - 20  # Jarak antar baris
+                    
+                    # Gambar tempat kosong kiri (tidak perlu gambar apa-apa)
+                    img_x_row2 += img_width + spacing_img  # Lewati kolom pertama kosong
+                    
+                    # Gambar barcode di tengah
+                    if images_row2[1][1]:  # Barcode
+                        c.drawImage(images_row2[1][1], img_x_row2, img_y_row2, width=img_width, height=img_width)
+                        c.drawCentredString(img_x_row2 + img_width / 2, img_y_row2 - 12, images_row2[1][0])
 
                 # Hapus barcode setelah selesai dipakai
                 if os.path.exists(barcode_path):
@@ -748,12 +821,24 @@ class SPKInputFrame(tk.Frame):
             self.dummy_label.configure(image="")
             self.dummy_temp_path = None
 
-    def potong_bahan(self):
-        if self.dummy_label:
-            self.dummy_label.configure(image="")
-            self.dummy_temp_path = None
+    def upload_potong(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg *.bmp")])
+        if file_path:
+            self.potong_temp_path = file_path
+            image = Image.open(file_path)
+            image = image.resize((100, 100))
+            photo = ImageTk.PhotoImage(image)
 
-    def memek(self):
-        if self.dummy_label:
-            self.dummy_label.configure(image="")
-            self.dummy_temp_path = None
+            if hasattr(self, 'potong_label'):
+                self.potong_label.configure(image=photo)
+                self.potong_label.image = photo
+            else:
+                self.potong_label = tk.Label(self, image=photo)
+                self.potong_label.image = photo
+                self.potong_label.grid(row=17, column=2)
+
+    def remove_potong(self):
+        if self.potong_label:
+            self.potong_label.configure(image="")
+            self.potong_temp_path = None
+

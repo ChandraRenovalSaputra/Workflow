@@ -137,7 +137,13 @@ def get_spk_details(spk_id):
     cursor = conn.cursor()
 
     # Get SPK basic info
-    cursor.execute("SELECT * FROM spk WHERE id = ?", (spk_id,))
+    cursor.execute("""
+        SELECT id, order_sales, no_po, costumer, nama_artikel, qty, tanggal_kirim,
+            jenis_bahan, qty_bahan, ukuran_cetak, jumlah_cetak, insheet, total_cetak,
+            warna, varnish, finishing,
+            gambar_desain, gambar_dummy, gambar_potong, barcode_image
+        FROM spk WHERE id = ?
+    """, (spk_id,))
     spk_data = cursor.fetchone()
 
     # Get tahapan with scan times - modified to match your schema
@@ -189,7 +195,8 @@ def create_spk_tables():
         varnish TEXT,
         finishing TEXT,
         gambar_desain BLOB,
-        gambar_dummy BLOB
+        gambar_dummy BLOB,
+        gambar_potong BLOB
     )
     """
     )
