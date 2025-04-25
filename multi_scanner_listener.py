@@ -50,7 +50,7 @@ def start_all_scanners():
 # Bisa juga dijalankan langsung
 if __name__ == "__main__":
     start_all_scanners()
-
+    print("ini merge chandra yang baru")
     import time
     while True:
         time.sleep(1)
