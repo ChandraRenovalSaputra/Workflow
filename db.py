@@ -410,3 +410,45 @@ def tambah_colom_db():
         print("ℹ️ Kolom sudah ada atau error lain:", e)
     finally:
         conn.close()
+
+def get_user_count():
+    """Mendapatkan jumlah user terdaftar"""
+    conn = get_users_conn()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users")
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+def is_username_exists(username):
+    """Cek apakah username sudah ada"""
+    conn = get_users_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
+
+def get_all_usernames():
+    """Mendapatkan semua username yang terdaftar"""
+    conn = get_users_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users")
+    usernames = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return usernames
+
+def update_user(old_username, new_username, new_password):
+    """Update username dan password"""
+    conn = get_users_conn()
+    c = conn.cursor()
+    try:
+        hashed = hash_password(new_password)
+        c.execute("UPDATE users SET username=?, password=? WHERE username=?", 
+                (new_username, hashed, old_username))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
