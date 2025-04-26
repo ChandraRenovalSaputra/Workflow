@@ -151,12 +151,17 @@ class LoginFrame(tk.Frame):
         top.wait_window()
 
     def login(self):
-        username = self.username_entry.get()
-        password = self.password_entry.get()
+        username = self.username_entry.get().strip()
+        password = self.password_entry.get().strip()
+        
         user = check_login(username, password)
         if user:
-            self.controller.current_user = user
-            self.unbind_all("<Return>")
+            # Simpan sebagai dictionary
+            self.controller.current_user = {
+                "id": user[0],
+                "username": user[1],
+                "name": user[1]  # Default name sama dengan username
+            }
             self.controller.switch_frame(DashboardFrame)
         else:
-            self.custom_messagebox("Login Gagal", "Username atau password salah.")
+            messagebox.showerror("Gagal", "Username/password salah!")
