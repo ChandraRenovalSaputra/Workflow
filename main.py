@@ -28,32 +28,35 @@ def center_window(root, width=1600, height=800):
 
 class App(tk.Tk):
     def __init__(self):
+        from ui_dashboard import DashboardFrame
+        from ui_profile import ProfileFrame
+        self.dashboard_frame_class = DashboardFrame
+        self.profile_frame_class = ProfileFrame
         super().__init__()
         self.title("Sistem Workflow Percetakan")
+        self.current_user = None  # 🆕 Tambahkan ini untuk menyimpan data user login
 
         # Atur ukuran window dan posisikan di tengah layar
         center_window(self, 1600, 800)
-
         self.resizable(True, True)
-
         create_tables()
-
         self.state("zoomed")  # Untuk fullscreen pada awalnya
 
         self._frame = None
-        self.switch_frame(lambda parent, controller: LoginFrame(parent, controller))
-
+        self.switch_frame(LoginFrame)
+        
     def switch_frame(self, frame_class, *args):
         """Berpindah antar frame"""
         if self._frame is not None:
             self._frame.destroy()
 
-        if args:
+        # Handle lambda atau callable
+        if callable(frame_class):
             self._frame = frame_class(self, self, *args)
         else:
-            self._frame = frame_class(self, self)
+            # Jika langsung class
+            self._frame = frame_class(self, self, *args)
 
-        # 🆕 Cek dan panggil load_table jika ada
         if hasattr(self._frame, "load_table"):
             try:
                 self._frame.load_table()
