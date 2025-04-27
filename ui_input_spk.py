@@ -600,7 +600,8 @@ class SPKInputFrame(tk.Frame):
 
         self.tahapan_options = [
             "DESAIN", "ACC DESAIN", "DUMMY", "CTP", "POTONG BAHAN", "CETAK",
-            "POND", "FORMING", "LAMINATING", "PACKING", "PENGIRIMAN", "DITERIMA COSTUMER"
+            "POND", "FORMING", "LAMINATING", "PACKING", "POLI", "EMBOS", "SPOT UV", 
+            "LEM", "SPIRAL", "PENGIRIMAN", "DITERIMA COSTUMER"
         ]
 
         label_font = ("Arial", 14, "bold")
