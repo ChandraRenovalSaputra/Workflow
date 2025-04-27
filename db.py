@@ -194,6 +194,8 @@ def create_spk_tables():
         warna TEXT,
         varnish TEXT,
         finishing TEXT,
+        barcode_data TEXT,
+        barcode_image BLOB,
         gambar_desain BLOB,
         gambar_dummy BLOB,
         gambar_potong BLOB
@@ -208,6 +210,7 @@ def create_spk_tables():
         spk_id INTEGER,
         nama_tahapan TEXT,
         status TEXT,
+        keterangan TEXT,
         mulai TEXT,
         selesai TEXT,
         FOREIGN KEY(spk_id) REFERENCES spk(id)
