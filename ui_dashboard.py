@@ -1,83 +1,70 @@
 import tkinter as tk
-from tkinter import ttk
 from ui_input_spk import SPKInputFrame
 from lihat_jadwal_frame import LihatJadwalFrame
-
+from ui_profile import ProfileFrame
 
 class DashboardFrame(tk.Frame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg="#f0f2f5")
+        super().__init__(parent, bg="#f4f6f9")
         self.controller = controller
 
+        self.build_main_content()
+
+    def build_main_content(self):
         # === Header ===
-        header = tk.Frame(self, bg="#0078D7", height=60)
+        header = tk.Frame(self, bg="#0078D7", height=80)
         header.pack(side="top", fill="x")
 
-        title = tk.Label(header, text="📋 Dashboard Workflow Percetakan", font=("Segoe UI", 18, "bold"), bg="#0078D7", fg="white")
-        title.pack(side="left", padx=20, pady=10)
+        title = tk.Label(header, text="📋 Dashboard Workflow Percetakan",
+                         font=("Segoe UI", 22, "bold"), bg="#0078D7", fg="white")
+        title.pack(side="left", padx=20, pady=20)
 
-        logout_btn = tk.Button(header, text="Logout", command=self.logout, bg="white", fg="#0078D7", font=("Segoe UI", 10, "bold"),
+        # === Frame tombol kanan atas ===
+        top_button_frame = tk.Frame(header, bg="#0078D7")
+        top_button_frame.pack(side="right", padx=20, pady=20)
+
+        # Tombol Profil
+        profile_btn = tk.Button(top_button_frame, text="⚙️ Profil",
+                                command=lambda: self.controller.switch_frame(ProfileFrame),
+                                bg="white", fg="#0078D7", font=("Segoe UI", 10, "bold"),
+                                relief="flat", cursor="hand2", padx=10, pady=5)
+        profile_btn.pack(side="left", padx=5)
+
+        # Tombol Logout
+        logout_btn = tk.Button(top_button_frame, text="🔒 Logout",
+                               command=self.logout,
+                               bg="white", fg="#e74c3c", font=("Segoe UI", 10, "bold"),
                                relief="flat", cursor="hand2", padx=10, pady=5)
-        logout_btn.pack(side="right", padx=20, pady=10)
+        logout_btn.pack(side="left", padx=5)
 
-        # === Welcome Section ===
-        user = getattr(controller, "current_user", (None, "User", None))  # fallback tuple
-        welcome = tk.Label(self, text=f"Halo, {user[1]} 👋", font=("Segoe UI", 16), bg="#f0f2f5", fg="#333")
+        # === Welcome Text ===
+        user = getattr(self.controller, "current_user", {'username': 'User'})
+        welcome = tk.Label(self, text=f"Halo, {user['username']} 👋",
+                           font=("Segoe UI", 20, "bold"), bg="#f4f6f9", fg="#2c3e50")
+        welcome.pack(pady=(40, 10))
 
-        welcome.pack(pady=(30, 10))
-
-        subtitle = tk.Label(self, text="Buat pekerjaanmu lebih mudah", font=("Segoe UI", 12), bg="#f0f2f5", fg="#666")
+        subtitle = tk.Label(self, text="Silakan pilih aksi yang ingin dilakukan:",
+                            font=("Segoe UI", 14), bg="#f4f6f9", fg="#555")
         subtitle.pack()
 
-       
+        # === Tombol Navigasi Tengah ===
+        button_frame = tk.Frame(self, bg="#f4f6f9")
+        button_frame.pack(pady=40)
 
-        # === Tombol Aksi Utama ===
-        button_frame = tk.Frame(self, bg="#f0f2f5")
-        button_frame.pack(pady=(10, 40))
+        self.create_nav_button(button_frame, "➕ Buat SPK", "#3498db", lambda: self.controller.switch_frame(SPKInputFrame))
+        self.create_nav_button(button_frame, "📄 Lihat Jadwal", "#2ecc71", lambda: self.controller.switch_frame(LihatJadwalFrame))
 
-        # Tombol Buat SPK
+        # === Footer ===
+        footer = tk.Label(self, text="© 2025 PT Percetakan", font=("Segoe UI", 10),
+                          bg="#f4f6f9", fg="#aaa")
+        footer.pack(side="bottom", pady=20)
+
+    def create_nav_button(self, parent, text, color, command):
         tk.Button(
-            button_frame, 
-            text="➕ Buat SPK", 
-            width=20, 
-            height=2, 
-            command=lambda: self.controller.switch_frame(SPKInputFrame), 
-            bg="#007BFF", 
-            fg="white", 
-            font=("Helvetica", 14), 
-            relief="flat", 
-            padx=10, 
-            pady=10
+            parent, text=text, width=25, height=2, command=command,
+            bg=color, fg="white", font=("Segoe UI", 14, "bold"),
+            relief="flat", padx=10, pady=10, cursor="hand2"
         ).pack(pady=10)
-
-        # Tombol Lihat Pekerjaan
-        tk.Button(
-            button_frame, 
-            text="📄 Lihat Pekerjaan", 
-            width=20, 
-            height=2, 
-            command=lambda: self.controller.switch_frame(LihatJadwalFrame), 
-            bg="#4CAF50", 
-            fg="white", 
-            font=("Helvetica", 14), 
-            relief="flat", 
-            padx=10, 
-            pady=10
-        ).pack(pady=10)
-
-
-        # === Placeholder for more features ===
-        tk.Label(self, text="© PT Percetakan.", font=("Segoe UI", 11), bg="#f0f2f5", fg="#999").pack(pady=(50, 10))
-
-    def create_card(self, parent, title, count, color):
-        card = tk.Frame(parent, bg="white", bd=0, relief="flat", padx=20, pady=20, highlightthickness=1, highlightbackground="#ddd")
-        card.pack(side="left", padx=15)
-
-        lbl_title = tk.Label(card, text=title, font=("Segoe UI", 12), bg="white", fg="#333")
-        lbl_title.pack(anchor="w")
-
-        lbl_count = tk.Label(card, text=count, font=("Segoe UI", 24, "bold"), bg="white", fg=color)
-        lbl_count.pack(anchor="w", pady=(5, 0))
 
     def logout(self):
         from ui_login import LoginFrame

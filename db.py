@@ -122,7 +122,7 @@ def get_jadwal_pekerjaan():
     FROM spk s
     JOIN current_stages cs ON s.id = cs.spk_id AND cs.stage_priority = 1
     JOIN spk_status ss ON s.id = ss.spk_id
-    ORDER BY cs.target_selesai ASC
+    ORDER BY cs.spk_id DESC
     """
 
     cursor.execute(query)
@@ -137,7 +137,13 @@ def get_spk_details(spk_id):
     cursor = conn.cursor()
 
     # Get SPK basic info
-    cursor.execute("SELECT * FROM spk WHERE id = ?", (spk_id,))
+    cursor.execute("""
+        SELECT id, order_sales, no_po, costumer, nama_artikel, qty, tanggal_kirim,
+            jenis_bahan, qty_bahan, ukuran_cetak, jumlah_cetak, insheet, total_cetak,
+            warna, varnish, finishing,
+            gambar_desain, gambar_dummy, gambar_potong, barcode_image
+        FROM spk WHERE id = ?
+    """, (spk_id,))
     spk_data = cursor.fetchone()
 
     # Get tahapan with scan times - modified to match your schema
@@ -154,7 +160,7 @@ def get_spk_details(spk_id):
         LEFT JOIN spk_tracking tr ON t.spk_id = tr.spk_id AND t.nama_tahapan = tr.tahapan
         WHERE t.spk_id = ?
         GROUP BY t.nama_tahapan
-        ORDER BY t.id
+        ORDER BY t.mulai ASC
     """,
         (spk_id,),
     )
@@ -188,8 +194,11 @@ def create_spk_tables():
         warna TEXT,
         varnish TEXT,
         finishing TEXT,
+        barcode_data TEXT,
+        barcode_image BLOB,
         gambar_desain BLOB,
-        gambar_dummy BLOB
+        gambar_dummy BLOB,
+        gambar_potong BLOB
     )
     """
     )
@@ -201,6 +210,7 @@ def create_spk_tables():
         spk_id INTEGER,
         nama_tahapan TEXT,
         status TEXT,
+        keterangan TEXT,
         mulai TEXT,
         selesai TEXT,
         FOREIGN KEY(spk_id) REFERENCES spk(id)
@@ -401,5 +411,47 @@ def tambah_colom_db():
         print("✅ Kolom keterangan berhasil ditambahkan.")
     except sqlite3.OperationalError as e:
         print("ℹ️ Kolom sudah ada atau error lain:", e)
+    finally:
+        conn.close()
+
+def get_user_count():
+    """Mendapatkan jumlah user terdaftar"""
+    conn = get_users_conn()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users")
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+def is_username_exists(username):
+    """Cek apakah username sudah ada"""
+    conn = get_users_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
+
+def get_all_usernames():
+    """Mendapatkan semua username yang terdaftar"""
+    conn = get_users_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users")
+    usernames = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return usernames
+
+def update_user(old_username, new_username, new_password):
+    """Update username dan password"""
+    conn = get_users_conn()
+    c = conn.cursor()
+    try:
+        hashed = hash_password(new_password)
+        c.execute("UPDATE users SET username=?, password=? WHERE username=?", 
+                (new_username, hashed, old_username))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
     finally:
         conn.close()
