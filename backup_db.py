@@ -21,8 +21,8 @@ class BackupManager:
             self.scheduler.add_job(
                 self._perform_backup,
                 "cron",
-                hours=16,
-                minutes=0,
+                hour=16,
+                minute=0,
                 args=[db_path, backup_dir],
                 id=f"backup_{db_path}",
                 max_instances=1,
