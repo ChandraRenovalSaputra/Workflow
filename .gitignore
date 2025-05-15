@@ -81,7 +81,6 @@ target/
 # IPython
 profile_default/
 ipython_config.py
-workflow.db
 users.db
 spk_output/
 images/
