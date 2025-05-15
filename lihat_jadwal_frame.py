@@ -176,7 +176,6 @@ class LihatJadwalFrame(Frame):
         # 🔷 Baris data
         for i, row in enumerate(rows, start=1):
             row_to_display = row[:3] + row[4:]  # skip kolom ke-3 (status)
-
             tag = self.get_row_tag(row[5], row[7])  # mulai = row[5], deadline = row[7]
 
             if tag == "belum":
@@ -231,12 +230,8 @@ class LihatJadwalFrame(Frame):
         """Tentukan tag warna berdasarkan status deadline"""
         print(f"[DEBUG] Mulai: {mulai}, Target: {target}")  # log
 
-        if not mulai or mulai.strip() == "-":
-            return "belum"
 
         try:
-            if not target or target.strip() == "-":
-                return "normal"
 
             # Coba parsing waktu deadline
             target_dt = datetime.strptime(target.strip(), "%d-%m-%Y %H:%M")
@@ -246,11 +241,13 @@ class LihatJadwalFrame(Frame):
 
             if now > target_dt:
                 return "terlambat"
-
-            if (target_dt - now).total_seconds() < 1 * 3600:
+            elif (target_dt - now).total_seconds() < 1 * 3600:
                 return "warning"
+            elif not mulai or mulai.strip() == "-":
+                return "belum"
+            else:
+                return "normal"
 
-            return "normal"
         except Exception as e:
             print(f"[ERROR] Gagal parsing waktu: {e}")
             return "normal"

@@ -83,6 +83,10 @@ profile_default/
 ipython_config.py
 workflow.db
 users.db
+spk_output/
+images/
+workflow_backup/
+users_backup/
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is

@@ -9,6 +9,7 @@ import qrcode
 from datetime import datetime
 from io import BytesIO
 from tkinter import ttk
+from scrollable_frame import ScrollableFrame
 
 def center_window(root, width=1600, height=800):
     """Menempatkan window di tengah layar"""
@@ -45,20 +46,11 @@ class DetailSPKFrame(Frame):
         )
         title.pack(side="left", padx=20, pady=10)
 
-        # === SCROLLABLE ===
-        self.canvas = Canvas(self, bg="#f0f2f5", highlightthickness=0)
-        self.scrollbar = Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = Frame(self.canvas, bg="#f0f2f5")
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
-        )
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        # === SCROLLABLE FRAME ===
+        scrollable_frame_widget = ScrollableFrame(self)
+        scrollable_frame_widget.pack(fill="both", expand=True)
 
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-        self.bind_scroll_event()
+        self.scrollable_frame = scrollable_frame_widget.get_scrollable_frame()
 
         # === DATA SPK ===
         spk_data, tahapan_data = get_spk_details(spk_id)
@@ -119,23 +111,50 @@ class DetailSPKFrame(Frame):
 
         # === GAMBAR FRAME ===
         if spk_data:
+            # Main image container
             img_container = Frame(self.scrollable_frame, bg="#f0f2f5")
             img_container.pack(padx=30, pady=10, fill="x")
 
-            img_frame = Frame(img_container, bg="#f0f2f5")
-            img_frame.pack(anchor="center")
+            # First row frame (desain, dummy, potong)
+            row1_frame = Frame(img_container, bg="#f0f2f5")
+            row1_frame.pack()
 
-            # Desain
-            self.add_image_column(img_frame, 0, spk_data[16], "Desain")
-            # Barcode
+            # Second row frame (empty, barcode, empty)
+            row2_frame = Frame(img_container, bg="#f0f2f5")
+            row2_frame.pack()
+
+            # Row 1: Desain, Dummy, Potong
+            self.add_image_column(row1_frame, 0, spk_data[16], "Desain")
+            self.add_image_column(row1_frame, 1, spk_data[17], "Dummy")
+            self.add_image_column(row1_frame, 2, spk_data[18], "Potong Bahan")
+
+            # Row 2: Empty, Barcode, Empty
             barcode_img = (
                 self.generate_barcode_image()
-                if not (len(spk_data) > 18 and spk_data[19])
+                if not (len(spk_data) > 19 and spk_data[19])
                 else Image.open(io.BytesIO(spk_data[19]))
             )
-            self.add_image_column(img_frame, 1, barcode_img, "Barcode")
-            # Dummy
-            self.add_image_column(img_frame, 2, spk_data[17], "Dummy")
+            
+            # Add empty placeholder in column 0
+            empty_frame1 = Frame(row2_frame, width=200, height=200, bg="#f0f2f5")
+            empty_frame1.grid(row=0, column=0, padx=15)
+            
+            # Add barcode in column 1
+            if barcode_img:
+                barcode_img.thumbnail((200, 200))
+                barcode_photo = ImageTk.PhotoImage(barcode_img)
+                barcode_frame = Frame(row2_frame, bg="white")
+                barcode_frame.grid(row=0, column=1, padx=15)
+                
+                label_barcode = Label(barcode_frame, image=barcode_photo, bg="white")
+                label_barcode.image = barcode_photo
+                label_barcode.pack()
+                Label(barcode_frame, text="Barcode", font=("Segoe UI", 10, "bold"), bg="white").pack()
+            
+            # Add empty placeholder in column 2
+            empty_frame2 = Frame(row2_frame, width=200, height=200, bg="#f0f2f5")
+            empty_frame2.grid(row=0, column=2, padx=15)
+
 
         # === WORKFLOW PRODUKSI ===
         Label(
