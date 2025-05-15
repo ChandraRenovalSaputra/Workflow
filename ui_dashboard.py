@@ -7,6 +7,17 @@ class DashboardFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#f4f6f9")
         self.controller = controller
+        
+        # === Layout Utama ===
+        self.sidebar = tk.Frame(self, bg="#2c3e50", width=200)
+        self.sidebar.pack(side="left", fill="y")
+        
+        main_content = tk.Frame(self, bg="#f0f2f5")
+        main_content.pack(side="right", fill="both", expand=True)
+        
+        # === Build Komponen ===
+        self.build_sidebar()
+        self.build_main_content(main_content)
 
         self.build_main_content()
 
