@@ -3,6 +3,8 @@ from tkinter import ttk
 from ui_input_spk import SPKInputFrame
 from lihat_jadwal_frame import LihatJadwalFrame
 from ui_profile import ProfileFrame
+from tv_dashboard import TVLihatJadwal
+
 
 class DashboardFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -40,8 +42,6 @@ class DashboardFrame(tk.Frame):
             command=lambda: self.controller.switch_frame(ProfileFrame),
             **btn_style
         ).pack(pady=5, fill='x')
-        
-        # Tombol Lainnya bisa ditambahkan di sini
 
     def build_main_content(self, parent):
         # === Header ===
@@ -58,7 +58,6 @@ class DashboardFrame(tk.Frame):
         logout_btn.pack(side="right", padx=20, pady=10)
 
         # === Konten Utama ===
-        # Get user data properly (using dictionary)
         user = getattr(self.controller, "current_user", {'id': None, 'username': 'User', 'name': 'User'})
         welcome = tk.Label(parent, text=f"Halo, {user['username']} 👋", 
                         font=("Segoe UI", 16), bg="#f0f2f5", fg="#333")
@@ -102,9 +101,27 @@ class DashboardFrame(tk.Frame):
             pady=10
         ).pack(pady=10)
 
+        tk.Button(
+            button_frame,
+            text="🖥 Tampilkan ke TV",
+            width=20,
+            height=2,
+            command=self.tampilkan_tv,
+            bg="#8e44ad",
+            fg="white",
+            font=("Helvetica", 14),
+            relief="flat",
+            padx=10,
+            pady=10
+        ).pack(pady=10)
+
         # Footer
         tk.Label(parent, text="© PT Percetakan.", 
                 font=("Segoe UI", 11), bg="#f0f2f5", fg="#999").pack(pady=(50, 10))
+
+    def tampilkan_tv(self):
+        tv = TVLihatJadwal(self.controller)
+        tv.focus_set()
 
     def logout(self):
         from ui_login import LoginFrame
