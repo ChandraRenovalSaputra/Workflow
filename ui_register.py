@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-from db import register_user
-
+from db import get_all_usernames, get_user_count, is_username_exists, register_user
 
 class RegisterFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -93,17 +92,41 @@ class RegisterFrame(tk.Frame):
         return entry
 
     def register(self):
-        username = self.username_entry.get()
-        password = self.password_entry.get()
+        username = self.username_entry.get().strip()
+        password = self.password_entry.get().strip()
+        
+        # Validasi kosong
+        if not username or not password:
+            messagebox.showerror("Error", "Username dan password tidak boleh kosong!")
+            return
+        
+        # Validasi karakter (huruf dan angka)
+        if not username.isalnum() or not password.isalnum():
+            messagebox.showerror("Error", "Hanya boleh huruf dan angka!")
+            return
+        
+        # Validasi panjang
+        if len(username) < 3 or len(password) < 3:
+            messagebox.showerror("Error", "Minimal 3 karakter!")
+            return
+        
+        # Cek batas user (gunakan get_user_count() bukan get_all_usernames())
+        if get_user_count() >= 3:
+            messagebox.showerror("Error", "Batas maksimal user (3) telah tercapai!")
+            return
+        
+        # Cek username sudah ada
+        if is_username_exists(username):
+            messagebox.showerror("Error", "Username sudah digunakan!")
+            return
+        
+        # Proses registrasi
         if register_user(username, password):
-            messagebox.showinfo("Sukses", "Pendaftaran berhasil. Silakan login.")
-            self.controller.switch_frame(self.load_login_frame())
+            messagebox.showinfo("Sukses", "Registrasi berhasil!")
+            self.goto_login()
         else:
-            messagebox.showerror("Gagal", "Username sudah digunakan.")
+            messagebox.showerror("Error", "Gagal mendaftarkan user")
 
     def goto_login(self):
-        self.controller.switch_frame(self.load_login_frame())
-
-    def load_login_frame(self):
         from ui_login import LoginFrame
-        return LoginFrame
+        self.controller.switch_frame(LoginFrame)
