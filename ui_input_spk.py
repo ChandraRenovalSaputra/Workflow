@@ -1,4 +1,5 @@
 import sqlite3
+import re
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
@@ -63,7 +64,7 @@ class SPKInputFrame(tk.Frame):
             ("ORDER SALES",),
             ("NO PO",),
             ("COSTUMER",),
-            ("NAMA ARTIKEL",),
+            ("NAMA PRODUK",),
             ("QTY",),
             ("TANGGAL KIRIM", "date"),
             ("JENIS BAHAN",),
@@ -73,7 +74,6 @@ class SPKInputFrame(tk.Frame):
             ("INSHEET",),
             ("TOTAL CETAK",),
             ("WARNA",),
-            ("VARNISH",),
             ("FINISHING",),
         ]
 
@@ -289,14 +289,14 @@ class SPKInputFrame(tk.Frame):
                 INSERT INTO spk (
                     order_sales, no_po, costumer, nama_artikel, qty, tanggal_kirim,
                     jenis_bahan, qty_bahan, ukuran_cetak, jumlah_cetak, insheet,
-                    total_cetak, warna, varnish, finishing,
+                    total_cetak, warna, finishing,
                     gambar_desain, gambar_dummy, gambar_potong
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data["ORDER SALES"],
                 data["NO PO"],
                 data["COSTUMER"],
-                data["NAMA ARTIKEL"],
+                data["NAMA PRODUK"],
                 int(data["QTY"]),
                 data["TANGGAL KIRIM"],
                 data["JENIS BAHAN"],
@@ -306,7 +306,6 @@ class SPKInputFrame(tk.Frame):
                 data["INSHEET"],
                 data["TOTAL CETAK"],
                 data["WARNA"],
-                data["VARNISH"],
                 data["FINISHING"],
                 gambar_desain_path,
                 gambar_dummy_path,
@@ -347,7 +346,7 @@ class SPKInputFrame(tk.Frame):
 
             # Generate PDF
             costumer = data["COSTUMER"].replace(" ", "_")
-            artikel = data["NAMA ARTIKEL"].replace(" ", "_")
+            artikel = data["NAMA PRODUK"].replace(" ", "_")
             pdf_filename = f"{costumer}_{artikel}.pdf"
             
             try:
@@ -427,7 +426,7 @@ class SPKInputFrame(tk.Frame):
                 ["Customer", data.get("costumer", "")],
                 ["Order Sales", data.get("order_sales", "")],
                 ["No PO", data.get("no_po", "")],
-                ["Nama Artikel", data.get("nama_artikel", "")]
+                ["Nama Produk", data.get("nama_artikel", "")]
             ]
 
             col_widths = [5 * cm, 10 * cm]
@@ -458,7 +457,6 @@ class SPKInputFrame(tk.Frame):
                 ["Insheet", data.get("insheet", "")],
                 ["Total Cetak", data.get("total_cetak", "")],
                 ["Warna", data.get("warna", "")],
-                ["Varnish", data.get("varnish", "")],
                 ["Finishing", data.get("finishing", "")]
             ]
 
@@ -600,7 +598,7 @@ class SPKInputFrame(tk.Frame):
 
         self.tahapan_options = [
             "DESAIN", "ACC DESAIN", "DUMMY", "CTP", "POTONG BAHAN", "CETAK",
-            "POND", "FORMING", "LAMINATING", "PACKING", "POLI", "EMBOS", "SPOT UV", 
+            "POND", "FORMING", "LAMINATING / VARNISH", "PACKING", "POLI", "EMBOS", "SPOT UV", 
             "LEM", "SPIRAL"
         ]
 
@@ -843,3 +841,20 @@ class SPKInputFrame(tk.Frame):
         if self.potong_label:
             self.potong_label.configure(image="")
             self.potong_temp_path = None
+
+    # def format_angka_with_dot(value):
+    #     # Hapus karakter non-digit
+    #     raw = re.sub(r'[^\d]', '', value)
+    #     if raw == '':
+    #         return ''
+    #     return f"{int(raw):,}".replace(",", ".")
+    
+    # def setup_ribuan_format(entry, var):
+    #     def on_change(*args):
+    #         current = var.get()
+    #         new_value = format_angka_with_dot(current)
+    #         if current != new_value:
+    #             var.set(new_value)
+
+    #     var.trace_add('write', on_change)
+    #     entry.config(validate="key")

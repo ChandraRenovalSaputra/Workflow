@@ -59,11 +59,11 @@ class SPKPreviewFrame(tk.Frame):
 
         for i, (label_text, key) in enumerate([
             ("ORDER SALES", "order_sales"), ("NO PO", "no_po"), ("COSTUMER", "costumer"),
-            ("NAMA ARTIKEL", "nama_artikel"), ("QTY", "qty"), ("TANGGAL KIRIM", "tanggal_kirim"),
+            ("NAMA PRODUK", "nama_artikel"), ("QTY", "qty"), ("TANGGAL KIRIM", "tanggal_kirim"),
             ("JENIS BAHAN", "jenis_bahan"), ("QTY BAHAN", "qty_bahan"),
             ("UKURAN CETAK", "ukuran_cetak"), ("JUMLAH CETAK", "jumlah_cetak"),
             ("INSHEET", "insheet"), ("TOTAL CETAK", "total_cetak"),
-            ("WARNA", "warna"), ("VARNISH", "varnish"), ("FINISHING", "finishing"),
+            ("WARNA", "warna"), ("FINISHING", "finishing"),
         ]):
             tk.Label(info_frame, text=f"{label_text} :", font=("Segoe UI", 11, "bold"),
                     bg="white", anchor="w", width=20).grid(row=i, column=0, sticky="w", pady=4, padx=10)
