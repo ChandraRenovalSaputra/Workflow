@@ -50,6 +50,12 @@ def format_dengan_titik(angka_str):
             return f"{angka:,}".replace(",", ".")
         except:
             return angka_str  # fallback
+        
+def safe_int(value):
+    try:
+        return int(str(value).replace(".", "").strip())
+    except:
+        return 0
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -329,14 +335,14 @@ class SPKInputFrame(tk.Frame):
                 data["NO PO"],
                 data["COSTUMER"],
                 data["NAMA PRODUK"],
-                int(data["QTY"].replace('.', '')),
+                safe_int(data["QTY"]),
                 data["TANGGAL KIRIM"],
                 data["JENIS BAHAN"],
-                data["QTY BAHAN"],
+                safe_int(data["QTY BAHAN"]),
                 data["UKURAN CETAK"],
-                data["JUMLAH CETAK (DRUK)"],
-                data["INSHEET"],
-                data["TOTAL CETAK"],
+                safe_int(data["JUMLAH CETAK (DRUK)"]),
+                safe_int(data["INSHEET"]),
+                safe_int(data["TOTAL CETAK"]),
                 data["WARNA"],
                 data["FINISHING"],
                 gambar_desain_path,
