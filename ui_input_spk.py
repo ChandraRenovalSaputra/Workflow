@@ -29,6 +29,28 @@ import locale
 # Set locale ke Indonesia
 locale.setlocale(locale.LC_TIME, 'Indonesian')  # Untuk Windows
 
+
+def format_angka_with_dot(value):
+    raw = re.sub(r'[^\d]', '', value)
+    if raw == '':
+        return ''
+    return f"{int(raw):,}".replace(",", ".")
+
+def setup_ribuan_format(entry, var):
+    def on_change(*args):
+        current = var.get()
+        new_value = format_angka_with_dot(current)
+        if current != new_value:
+            var.set(new_value)
+    var.trace_add('write', on_change)
+    
+def format_dengan_titik(angka_str):
+        try:
+            angka = int(str(angka_str).replace('.', '').replace(',', '').strip())
+            return f"{angka:,}".replace(",", ".")
+        except:
+            return angka_str  # fallback
+
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#f0f2f5")
@@ -178,15 +200,15 @@ class SPKInputFrame(tk.Frame):
             style = ttk.Style()
             style.theme_use("default")
             style.configure("my.DateEntry", 
-                          fieldbackground="white",
-                          background="#0078D7",
-                          foreground="black",
-                          arrowcolor="white",
-                          bordercolor="#ccc",
-                          lightcolor="#0078D7",
-                          darkcolor="#005a9e",
-                          relief="flat",
-                          padding=5)
+                        fieldbackground="white",
+                        background="#0078D7",
+                        foreground="black",
+                        arrowcolor="white",
+                        bordercolor="#ccc",
+                        lightcolor="#0078D7",
+                        darkcolor="#005a9e",
+                        relief="flat",
+                        padding=5)
 
             today = datetime.today().date()
             entry = DateEntry(
@@ -197,14 +219,24 @@ class SPKInputFrame(tk.Frame):
                 width=20,
                 style="my.DateEntry",
                 font=("Segoe UI", 14),
-                locale='id_ID'  # Format tanggal Indonesia
+                locale='id_ID'
             )
-
         else:
-            entry = tk.Entry(frame, font=("Segoe UI", 14)) 
+            entry = tk.Entry(frame, font=("Segoe UI", 14))
+
         entry.pack(side="left", fill="x", expand=True)
 
+        # ✅ Tambahkan auto-format jika field cocok
+        if label_text in ["QTY", "QTY BAHAN", "JUMLAH CETAK (DRUK)", "INSHEET", "TOTAL CETAK"]:
+            var = tk.StringVar()
+            entry.config(textvariable=var)
+            setup_ribuan_format(entry, var)
+        else:
+            var = tk.StringVar()
+            entry.config(textvariable=var)
+
         self.entries[label_text] = entry
+
 
     def clear_form(self):
         confirm = messagebox.askokcancel("Konfirmasi", "Apakah kamu yakin ingin menghapus semua data form?")
@@ -297,7 +329,7 @@ class SPKInputFrame(tk.Frame):
                 data["NO PO"],
                 data["COSTUMER"],
                 data["NAMA PRODUK"],
-                int(data["QTY"]),
+                int(data["QTY"].replace('.', '')),
                 data["TANGGAL KIRIM"],
                 data["JENIS BAHAN"],
                 data["QTY BAHAN"],
@@ -422,12 +454,14 @@ class SPKInputFrame(tk.Frame):
             info_umum_data = [
                 [Paragraph("Keterangan Produk", title_style), ""],
                 ["Nomor SPK", f"SPK-{data.get('id', '')}"],
-                ["Tanggal Kirim", data.get("tanggal_kirim", "")],
-                ["Customer", data.get("costumer", "")],
                 ["Order Sales", data.get("order_sales", "")],
                 ["No PO", data.get("no_po", "")],
-                ["Nama Produk", data.get("nama_artikel", "")]
+                ["Customer", data.get("costumer", "")],
+                ["Nama Produk", data.get("nama_artikel", "")],
+                ["Qty", format_dengan_titik(data.get("qty", ""))],            
+                ["Tanggal Kirim", data.get("tanggal_kirim", "")]                                       
             ]
+
 
             col_widths = [5 * cm, 10 * cm]
             total_table_width = sum(col_widths)
@@ -451,11 +485,11 @@ class SPKInputFrame(tk.Frame):
             table_data = [
                 [Paragraph("Spesifikasi Produk", title_style), ""],
                 ["Jenis Bahan", data.get("jenis_bahan", "")],
-                ["Qty Bahan", data.get("qty_bahan", "")],
+                ["Qty Bahan", format_dengan_titik(data.get("qty_bahan", ""))],
                 ["Ukuran Cetak", data.get("ukuran_cetak", "")],
-                ["Jumlah Cetak", data.get("jumlah_cetak", "")],
-                ["Insheet", data.get("insheet", "")],
-                ["Total Cetak", data.get("total_cetak", "")],
+                ["Jumlah Cetak", format_dengan_titik(data.get("jumlah_cetak", ""))],
+                ["Insheet", format_dengan_titik(data.get("insheet", ""))],
+                ["Total Cetak", format_dengan_titik(data.get("total_cetak", ""))],
                 ["Warna", data.get("warna", "")],
                 ["Finishing", data.get("finishing", "")]
             ]
@@ -842,19 +876,3 @@ class SPKInputFrame(tk.Frame):
             self.potong_label.configure(image="")
             self.potong_temp_path = None
 
-    # def format_angka_with_dot(value):
-    #     # Hapus karakter non-digit
-    #     raw = re.sub(r'[^\d]', '', value)
-    #     if raw == '':
-    #         return ''
-    #     return f"{int(raw):,}".replace(",", ".")
-    
-    # def setup_ribuan_format(entry, var):
-    #     def on_change(*args):
-    #         current = var.get()
-    #         new_value = format_angka_with_dot(current)
-    #         if current != new_value:
-    #             var.set(new_value)
-
-    #     var.trace_add('write', on_change)
-    #     entry.config(validate="key")
