@@ -69,3 +69,7 @@ class BackupManager:
         if self.scheduler.running:
             self.scheduler.shutdown(wait=False)
             print("Backup scheduler stopped")
+    
+    def manual_backup(self):
+        for db_path, backup_dir in self.databases:
+            self._perform_backup(db_path, backup_dir)
