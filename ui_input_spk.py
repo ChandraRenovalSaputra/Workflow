@@ -388,7 +388,9 @@ class SPKInputFrame(tk.Frame):
             pdf_filename = f"{costumer}_{artikel}.pdf"
             
             try:
-                self.generate_pdf(spk_id, gambar_desain_path, gambar_dummy_path, pdf_filename)
+                logo_path = "img/image.png"
+                self.generate_pdf(spk_id, gambar_desain_path, gambar_dummy_path, pdf_filename, logo_path)
+
             except Exception as e:
                 print(f"Error generating PDF: {e}")
                 # Lanjutkan meskipun PDF gagal dibuat
@@ -418,7 +420,7 @@ class SPKInputFrame(tk.Frame):
                 conn.close()
 
 
-    def generate_pdf(self, spk_id, desain_path, dummy_path, filename):
+    def generate_pdf(self, spk_id, desain_path, dummy_path, filename, logo_path=None):
         """Fungsi untuk membuat PDF SPK dengan tampilan profesional"""
         os.makedirs("spk_output", exist_ok=True)
         filepath = os.path.join("spk_output", filename)
@@ -436,16 +438,32 @@ class SPKInputFrame(tk.Frame):
             # Siapkan PDF
             c = canvas.Canvas(filepath, pagesize=A4)
             width, height = A4
-            margin_x, margin_y = 2 * cm, 2 * cm
+            # Margin lebih kecil untuk naikkan posisi awal
+            margin_x, margin_y = 2 * cm, 1 * cm
             y = height - margin_y
 
-            # Judul utama
+            # --- Logo Perusahaan ---
+            if logo_path and os.path.exists(logo_path):
+                logo_width = 5 * cm
+                logo_height = 3 * cm
+                c.drawImage(
+                    logo_path,
+                    (width - logo_width) / 2,
+                    y - logo_height,
+                    width=logo_width,
+                    height=logo_height,
+                    preserveAspectRatio=True
+                )
+                y -= logo_height + 1  # Jarak setelah logo diperkecil
+
+            # --- Judul ---
             c.setFont("Helvetica-Bold", 16)
             c.drawCentredString(width / 2, y, "SURAT PERINTAH KERJA (SPK)")
-            y -= 20
+            y -= 15  # Jarak setelah judul diperkecil
             c.setLineWidth(1)
             c.line(margin_x, y, width - margin_x, y)
-            y -= 30
+            y -= 15  # Jarak setelah garis diperkecil
+
 
             # Style untuk judul dalam tabel
             title_style = ParagraphStyle(
@@ -485,7 +503,7 @@ class SPKInputFrame(tk.Frame):
 
             w, h = info_umum_table.wrapOn(c, width, y)
             info_umum_table.drawOn(c, table_x, y - h)
-            y -= h + 30
+            y -= h + 10
 
             # --- Tabel Spesifikasi Produk ---
             table_data = [
@@ -515,60 +533,48 @@ class SPKInputFrame(tk.Frame):
             y -= h + 30
 
             # Gambar
-            # Ganti bagian kode gambar dengan yang berikut ini:
+            # Gambar (2x2 layout: Desain, Dummy, Potong, Barcode)
             try:
                 from reportlab.lib.utils import ImageReader
                 barcode_path = f"temp_barcode_{spk_id}.png"
                 qr = qrcode.make(f"SPK-{spk_id}")
                 qr.save(barcode_path)
 
-                img_width = 4 * cm
-                spacing_img = 2 * cm
-                images_row1 = []
-                images_row2 = []
+                images = []
 
-                # Baris pertama: desain, dummy, potong
                 if desain_path and os.path.exists(desain_path):
-                    images_row1.append(("Desain", desain_path))
+                    images.append(("Desain", desain_path))
                 if dummy_path and os.path.exists(dummy_path):
-                    images_row1.append(("Dummy", dummy_path))
+                    images.append(("Dummy", dummy_path))
                 if 'gambar_potong' in data and data['gambar_potong'] and os.path.exists(data['gambar_potong']):
-                    images_row1.append(("Potong Bahan", data['gambar_potong']))
-
-                # Baris kedua: kosong, barcode, kosong
+                    images.append(("Potong Bahan", data['gambar_potong']))
                 if os.path.exists(barcode_path):
-                    images_row2.append((None, None))  # Tempat kosong kiri
-                    images_row2.append(("Barcode", barcode_path))
-                    images_row2.append((None, None))  # Tempat kosong kanan
+                    images.append(("Barcode", barcode_path))
 
-                # Hitung total lebar untuk penempatan tengah
-                total_width_row1 = len(images_row1) * img_width + (len(images_row1) - 1) * spacing_img
-                total_width_row2 = 3 * img_width + 2 * spacing_img  # Selalu 3 kolom (kosong-barcode-kosong)
+                img_width = 4 * cm  # dari 5 cm jadi 4 cm
+                img_height = 4 * cm
+                spacing_x = 1.5 * cm  # lebih rapat
+                spacing_y = 1 * cm
 
-                # Gambar baris pertama
-                img_x_row1 = (width - total_width_row1) / 2
-                img_y_row1 = y - img_width
-                
-                for label, path in images_row1:
-                    if path:  # Hanya gambar yang ada
-                        c.drawImage(path, img_x_row1, img_y_row1, width=img_width, height=img_width)
-                        c.drawCentredString(img_x_row1 + img_width / 2, img_y_row1 - 12, label)
-                    img_x_row1 += img_width + spacing_img
+                num_cols = 2
+                x_start = (width - (num_cols * img_width + (num_cols - 1) * spacing_x)) / 2
+                y_start = y - img_height
 
-                # Gambar baris kedua (jika ada barcode)
-                if len(images_row2) > 0:
-                    img_x_row2 = (width - total_width_row2) / 2
-                    img_y_row2 = img_y_row1 - img_width - 20  # Jarak antar baris
-                    
-                    # Gambar tempat kosong kiri (tidak perlu gambar apa-apa)
-                    img_x_row2 += img_width + spacing_img  # Lewati kolom pertama kosong
-                    
-                    # Gambar barcode di tengah
-                    if images_row2[1][1]:  # Barcode
-                        c.drawImage(images_row2[1][1], img_x_row2, img_y_row2, width=img_width, height=img_width)
-                        c.drawCentredString(img_x_row2 + img_width / 2, img_y_row2 - 12, images_row2[1][0])
+                for idx, (label, path) in enumerate(images):
+                    row = idx // num_cols
+                    col = idx % num_cols
+                    x = x_start + col * (img_width + spacing_x)
+                    y_pos = y_start - row * (img_height + spacing_y + 12)
 
-                # Hapus barcode setelah selesai dipakai
+                    c.drawImage(path, x, y_pos, width=img_width, height=img_height)
+                    c.setFont("Helvetica", 9)  # Ukuran label lebih kecil
+                    c.drawCentredString(x + img_width / 2, y_pos - 10, label)
+
+                # hitung total tinggi layout gambar
+                y -= ((len(images) + 1) // 2) * (img_height + spacing_y + 12)
+
+
+                # Hapus barcode
                 if os.path.exists(barcode_path):
                     os.remove(barcode_path)
 
@@ -576,13 +582,124 @@ class SPKInputFrame(tk.Frame):
                 print(f"Error adding images to PDF: {e}")
 
 
-            # Footer
-            footer_y = 2.5 * cm
-            c.setFont("Helvetica", 9)
-            c.drawString(margin_x, footer_y, "Dokumen ini dicetak secara otomatis. Harap digunakan sesuai prosedur perusahaan.")
 
-            # Selesai
+            # # Footer
+            # footer_y = 2.5 * cm
+            # c.setFont("Helvetica", 9)
+            # c.drawString(margin_x, footer_y, "Dokumen ini dicetak secara otomatis. Harap digunakan sesuai prosedur perusahaan.")
+            
+            # Selesai halaman pertama, lanjut ke halaman kedua
+            c.showPage()  # Mulai halaman baru
+            y = height - margin_y  # Reset posisi Y
+
+            if logo_path and os.path.exists(logo_path):
+                logo_width = 5 * cm
+                logo_height = 3 * cm
+                c.drawImage(
+                    logo_path,
+                    (width - logo_width) / 2,
+                    y - logo_height,
+                    width=logo_width,
+                    height=logo_height,
+                    preserveAspectRatio=True
+                )
+                y -= logo_height + 2
+
+
+            from reportlab.lib.styles import getSampleStyleSheet
+
+            styles = getSampleStyleSheet()
+            title_style = styles['Heading5']
+            title_style.fontName = "Helvetica-Bold"
+            title_style.fontSize = 12
+            title_style.spaceAfter = 6
+
+            info_umum_data = [
+                [Paragraph("Keterangan Produk", title_style), ""],
+                ["Nomor SPK", f"SPK-{data.get('id', '')}"],
+                ["Order Sales", data.get("order_sales", "")],
+                ["No PO", data.get("no_po", "")],
+                ["Customer", data.get("costumer", "")],
+                ["Nama Produk", data.get("nama_artikel", "")],
+                ["Qty", format_dengan_titik(data.get("qty", ""))],
+            ]
+
+            info_table = Table(info_umum_data, colWidths=[5 * cm, 10 * cm])
+            info_table.setStyle(TableStyle([
+                ('GRID', (0, 1), (-1, -1), 0.5, colors.grey),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
+                ('SPAN', (0, 0), (-1, 0)),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 11),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ]))
+
+            w, h = info_table.wrapOn(c, width, y)
+            if y - h < 3 * cm:
+                c.showPage()
+                y = height - margin_y
+            info_table.drawOn(c, margin_x, y - h)
+            y -= h + 25  # spasi sebelum tabel estimasi
+
+
+            # Data Estimasi Tahapan Produksi
+            y -= 25
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(margin_x, y, "Rangkuman Estimasi Tahapan Produksi:")
+            y -= 15
+
+            estimasi_data = self.sort_estimasi_rows()
+
+            table_data = [["Tahapan", "Mulai", "Selesai"]]
+            for _, (tahap, mulai, selesai) in estimasi_data.items():
+                table_data.append([tahap, mulai, selesai])
+
+            # Buat tabel estimasi
+            col_widths = [6 * cm, 5.5 * cm, 5.5 * cm]  # Lebih lebar
+
+            estimasi_table = Table(table_data, colWidths=col_widths)
+
+            # Gaya tabel profesional
+            estimasi_table.setStyle(TableStyle([
+                # Border dan grid
+                ('GRID', (0, 0), (-1, -1), 0.75, colors.HexColor('#555555')),
+
+                # Header styling
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003366')),  # biru gelap
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+
+                # Isi tabel styling
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 11),
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
+
+                # Padding supaya longgar
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]))
+
+
+            w, h = estimasi_table.wrapOn(c, width, y)
+            if y - h < 3 * cm:  # kalau tidak cukup di halaman
+                c.showPage()
+                y = height - margin_y
+            estimasi_table.drawOn(c, margin_x, y - h)
+            y -= h + 25
+
+
+            # Simpan PDF
             c.save()
+
 
             # Cetak otomatis (opsional)
             self.print_pdf(filepath)
