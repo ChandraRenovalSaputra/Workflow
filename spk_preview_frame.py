@@ -58,16 +58,28 @@ class SPKPreviewFrame(tk.Frame):
         info_frame.pack(padx=20, pady=10, fill="x")
 
         for i, (label_text, key) in enumerate([
-            ("ORDER SALES", "order_sales"), ("NO PO", "no_po"), ("COSTUMER", "costumer"),
-            ("NAMA ARTIKEL", "nama_artikel"), ("QTY", "qty"), ("TANGGAL KIRIM", "tanggal_kirim"),
-            ("JENIS BAHAN", "jenis_bahan"), ("QTY BAHAN", "qty_bahan"),
-            ("UKURAN CETAK", "ukuran_cetak"), ("JUMLAH CETAK", "jumlah_cetak"),
-            ("INSHEET", "insheet"), ("TOTAL CETAK", "total_cetak"),
-            ("WARNA", "warna"), ("VARNISH", "varnish"), ("FINISHING", "finishing"),
+            ("ORDER SALES", "order_sales"),
+            ("NO PO", "no_po"),
+            ("COSTUMER", "costumer"),
+            ("NAMA PRODUK", "nama_artikel"),
+            ("QTY", "qty"),
+            ("TANGGAL KIRIM", "tanggal_kirim"),
+            ("JENIS BAHAN", "jenis_bahan"),
+            ("QTY BAHAN", "qty_bahan"),
+            ("UKURAN CETAK", "ukuran_cetak"),
+            ("JUMLAH CETAK", "jumlah_cetak"),
+            ("INSHEET", "insheet"),
+            ("TOTAL CETAK", "total_cetak"),
+            ("WARNA", "warna"),
+            ("FINISHING", "finishing"),
         ]):
+            value = self.data.get(key, "-")
+            if key in ["qty", "qty_bahan", "jumlah_cetak", "insheet", "total_cetak"]:
+                value = SPKPreviewFrame.format_dengan_titik(value)
+
             tk.Label(info_frame, text=f"{label_text} :", font=("Segoe UI", 11, "bold"),
                     bg="white", anchor="w", width=20).grid(row=i, column=0, sticky="w", pady=4, padx=10)
-            tk.Label(info_frame, text=self.data.get(key, "-"), font=("Segoe UI", 11),
+            tk.Label(info_frame, text=value, font=("Segoe UI", 11),
                     bg="white", anchor="w").grid(row=i, column=1, sticky="w", pady=4)
 
         # Gambar & Barcode
@@ -174,3 +186,10 @@ class SPKPreviewFrame(tk.Frame):
         if hasattr(self, 'barcode_path') and os.path.exists(self.barcode_path):
             os.remove(self.barcode_path)
         super().destroy()
+
+    def format_dengan_titik(angka_str):
+        try:
+            angka = int(str(angka_str).replace('.', '').replace(',', '').strip())
+            return f"{angka:,}".replace(",", ".")
+        except:
+            return angka_str  # fallback
