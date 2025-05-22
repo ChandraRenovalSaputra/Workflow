@@ -5,12 +5,16 @@ from db import get_jadwal_pekerjaan, get_workflow_conn, search_jadwal
 from detail_spk import show_spk_detail
 from datetime import datetime
 from scrollable_frame import ScrollableFrame
+from backup_db import BackupManager
 
 
 class LihatJadwalFrame(Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+        self.backup_manager = BackupManager(
+            [("workflow.db", "workflow_backup"), ("users.db", "users_backup")]
+        )
         self.configure(bg="#ecf0f1")
 
         Label(
@@ -89,6 +93,17 @@ class LihatJadwalFrame(Frame):
 
         Button(
             search_frame,
+            text="📥 Backup",
+            font=("Segoe UI", 12, "bold"),
+            bg="#2980b9",
+            fg="white",
+            activebackground="#3498db",
+            command=self.backup_manager.manual_backup,
+            padx=15,
+        ).pack(side=LEFT, padx=10)
+
+        Button(
+            search_frame,
             text="📷 Scan",
             font=("Segoe UI", 12, "bold"),
             bg="#2980b9",
@@ -103,7 +118,6 @@ class LihatJadwalFrame(Frame):
         self.refresh_table()
         # Refresh setiap 60 detik (60000 milidetik)
         self.after(60000, self.auto_refresh)
-
 
     def load_table(self, keyword=None, filter_status="semua"):
         if keyword is not None and keyword != "":
@@ -135,7 +149,6 @@ class LihatJadwalFrame(Frame):
                 filtered_rows[spk_id] = row
 
         rows = list(filtered_rows.values())
-
 
         headers = [
             "📝 Nama Pekerjaan",
@@ -190,7 +203,6 @@ class LihatJadwalFrame(Frame):
             else:
                 bg_color = "#a5d6a7"  
 
-
             for j, val in enumerate(row_to_display):
                 font_style = ("Segoe UI", 14, "bold") if j == 3 else ("Segoe UI", 14)
                 Label(
@@ -205,7 +217,6 @@ class LihatJadwalFrame(Frame):
                     height=2,
                 ).grid(row=i, column=j, sticky="nsew")
 
-
             Button(
                 self.table_frame,
                 text="ℹ️ Detail",
@@ -216,8 +227,6 @@ class LihatJadwalFrame(Frame):
                 activebackground="#74b9ff",
                 command=lambda sid=row[1]: self.lihat_detail(sid),
             ).grid(row=i, column=len(headers) - 1, sticky="nsew", ipadx=10, pady=2)
-
-
 
         # Responsif
         for col in range(len(headers)):
@@ -230,7 +239,6 @@ class LihatJadwalFrame(Frame):
     def get_row_tag(self, mulai, target, selesai):
         """Tentukan tag warna berdasarkan status deadline"""
         print(f"[DEBUG] Mulai: {mulai}, Target: {target}")  # log
-
 
         try:
 
@@ -246,7 +254,6 @@ class LihatJadwalFrame(Frame):
 
             print(f"[DEBUG] Now: {now}, Deadline: {target_dt}")  # log waktu
 
-
             if now > target_dt:
                 return "terlambat"
             elif (target_dt - now).total_seconds() < 1 * 3600:
@@ -259,7 +266,6 @@ class LihatJadwalFrame(Frame):
         except Exception as e:
             print(f"[ERROR] Gagal parsing waktu: {e}")
             # return "normal"
-
 
     def search(self):
         keyword = self.search_var.get()
@@ -283,7 +289,6 @@ class LihatJadwalFrame(Frame):
         from ui_dashboard import DashboardFrame
 
         self.controller.switch_frame(DashboardFrame)
-
 
     def filter_data(self):
         keyword = self.search_var.get()
