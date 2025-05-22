@@ -9,6 +9,7 @@ import qrcode
 from datetime import datetime
 from io import BytesIO
 from tkinter import ttk
+from scrollable_frame import ScrollableFrame
 
 def center_window(root, width=1600, height=800):
     """Menempatkan window di tengah layar"""
@@ -45,20 +46,11 @@ class DetailSPKFrame(Frame):
         )
         title.pack(side="left", padx=20, pady=10)
 
-        # === SCROLLABLE ===
-        self.canvas = Canvas(self, bg="#f0f2f5", highlightthickness=0)
-        self.scrollbar = Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = Frame(self.canvas, bg="#f0f2f5")
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
-        )
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        # === SCROLLABLE FRAME ===
+        scrollable_frame_widget = ScrollableFrame(self)
+        scrollable_frame_widget.pack(fill="both", expand=True)
 
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-        self.bind_scroll_event()
+        self.scrollable_frame = scrollable_frame_widget.get_scrollable_frame()
 
         # === DATA SPK ===
         spk_data, tahapan_data = get_spk_details(spk_id)
