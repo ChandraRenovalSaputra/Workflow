@@ -454,15 +454,15 @@ class SPKInputFrame(tk.Frame):
                     height=logo_height,
                     preserveAspectRatio=True
                 )
-                y -= logo_height + 1  # Jarak setelah logo diperkecil
+                y -= logo_height + 1  
 
             # --- Judul ---
             c.setFont("Helvetica-Bold", 16)
             c.drawCentredString(width / 2, y, "SURAT PERINTAH KERJA (SPK)")
-            y -= 15  # Jarak setelah judul diperkecil
+            y -= 15  
             c.setLineWidth(1)
             c.line(margin_x, y, width - margin_x, y)
-            y -= 15  # Jarak setelah garis diperkecil
+            y -= 15  
 
 
             # Style untuk judul dalam tabel
@@ -489,7 +489,7 @@ class SPKInputFrame(tk.Frame):
 
             col_widths = [5 * cm, 10 * cm]
             total_table_width = sum(col_widths)
-            table_x = (width - total_table_width) / 2  # center align table
+            table_x = (width - total_table_width) / 2  
 
             info_umum_table = Table(info_umum_data, colWidths=col_widths)
             info_umum_table.setStyle(TableStyle([
@@ -505,7 +505,7 @@ class SPKInputFrame(tk.Frame):
             info_umum_table.drawOn(c, table_x, y - h)
             y -= h + 10
 
-            # --- Tabel Spesifikasi Produk ---
+            
             table_data = [
                 [Paragraph("Spesifikasi Produk", title_style), ""],
                 ["Jenis Bahan", data.get("jenis_bahan", "")],
@@ -533,7 +533,7 @@ class SPKInputFrame(tk.Frame):
             y -= h + 30
 
             # Gambar
-            # Gambar (2x2 layout: Desain, Dummy, Potong, Barcode)
+            
             try:
                 from reportlab.lib.utils import ImageReader
                 barcode_path = f"temp_barcode_{spk_id}.png"
@@ -551,9 +551,9 @@ class SPKInputFrame(tk.Frame):
                 if os.path.exists(barcode_path):
                     images.append(("Barcode", barcode_path))
 
-                img_width = 4 * cm  # dari 5 cm jadi 4 cm
+                img_width = 4 * cm  
                 img_height = 4 * cm
-                spacing_x = 1.5 * cm  # lebih rapat
+                spacing_x = 1.5 * cm  
                 spacing_y = 1 * cm
 
                 num_cols = 2
@@ -567,7 +567,7 @@ class SPKInputFrame(tk.Frame):
                     y_pos = y_start - row * (img_height + spacing_y + 12)
 
                     c.drawImage(path, x, y_pos, width=img_width, height=img_height)
-                    c.setFont("Helvetica", 9)  # Ukuran label lebih kecil
+                    c.setFont("Helvetica", 9)  
                     c.drawCentredString(x + img_width / 2, y_pos - 10, label)
 
                 # hitung total tinggi layout gambar
@@ -589,8 +589,8 @@ class SPKInputFrame(tk.Frame):
             # c.drawString(margin_x, footer_y, "Dokumen ini dicetak secara otomatis. Harap digunakan sesuai prosedur perusahaan.")
             
             # Selesai halaman pertama, lanjut ke halaman kedua
-            c.showPage()  # Mulai halaman baru
-            y = height - margin_y  # Reset posisi Y
+            c.showPage()  
+            y = height - margin_y  
 
             if logo_path and os.path.exists(logo_path):
                 logo_width = 5 * cm
@@ -657,17 +657,14 @@ class SPKInputFrame(tk.Frame):
                 table_data.append([tahap, mulai, selesai])
 
             # Buat tabel estimasi
-            col_widths = [6 * cm, 5.5 * cm, 5.5 * cm]  # Lebih lebar
+            col_widths = [6 * cm, 5.5 * cm, 5.5 * cm] 
 
             estimasi_table = Table(table_data, colWidths=col_widths)
 
             # Gaya tabel profesional
             estimasi_table.setStyle(TableStyle([
-                # Border dan grid
                 ('GRID', (0, 0), (-1, -1), 0.75, colors.HexColor('#555555')),
-
-                # Header styling
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003366')),  # biru gelap
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003366')), 
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 12),
@@ -690,7 +687,7 @@ class SPKInputFrame(tk.Frame):
 
 
             w, h = estimasi_table.wrapOn(c, width, y)
-            if y - h < 3 * cm:  # kalau tidak cukup di halaman
+            if y - h < 3 * cm: 
                 c.showPage()
                 y = height - margin_y
             estimasi_table.drawOn(c, margin_x, y - h)
