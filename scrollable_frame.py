@@ -50,3 +50,6 @@ class ScrollableFrame(ttk.Frame):
 
     def _on_mousewheel_mac(self, event):
         self.canvas.yview_scroll(-1 * (event.delta), "units")
+
+    def get_scrollable_frame(self):
+        return self.scrollable_frame

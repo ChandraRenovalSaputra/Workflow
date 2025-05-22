@@ -4,6 +4,7 @@ from ui_login import LoginFrame
 from db import create_tables, create_spk_tables
 from db import tambah_colom_db
 from multi_scanner_listener import start_all_scanners
+from backup_db import BackupManager
 import threading
 from lihat_jadwal_frame import LihatJadwalFrame
 
@@ -26,7 +27,10 @@ def center_window(root, width=1600, height=800):
     root.minsize(width, height)  # Set ukuran minimal
     root.configure(bg="white")  # Background putih jika diperlukan
 
-
+BACKUP_CONFIG = [
+    ("workflow.db", "workflow_backup"),
+    ("users.db", "users_backup")
+]
 class App(tk.Tk):
     def __init__(self):
         from ui_dashboard import DashboardFrame
@@ -45,6 +49,15 @@ class App(tk.Tk):
 
         self._frame = None
         self.switch_frame(LoginFrame)
+
+        self.backup_manager = BackupManager(databases=BACKUP_CONFIG)
+        self.backup_manager.start()
+        
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+    
+    def _on_close(self):
+        self.backup_manager.shutdown()
+        self.destroy()
         
     def switch_frame(self, frame_class, *args):
         """Berpindah antar frame"""

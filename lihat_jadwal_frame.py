@@ -176,10 +176,10 @@ class LihatJadwalFrame(Frame):
         # 🔷 Baris data
         for i, row in enumerate(rows, start=1):
             row_to_display = row[:3] + row[4:]  # skip kolom ke-3 (status)
+            print(row)
+            tag = self.get_row_tag(row[5], row[7], row[6])  # mulai = row[5], deadline = row[7]
 
-            tag = self.get_row_tag(row[5], row[7])  # mulai = row[5], deadline = row[7]
-
-            if tag == "belum":
+            if tag == "belum" or tag == "normal":
                 bg_color = "#f7f9fa"  
             elif tag == "terlambat":
                 bg_color = "#ff6f61"  
@@ -227,33 +227,38 @@ class LihatJadwalFrame(Frame):
         print(f"🔍 Pindah ke halaman detail untuk SPK ID: {spk_id}")
         show_spk_detail(self.controller, spk_id)
 
-    def get_row_tag(self, mulai, target):
+    def get_row_tag(self, mulai, target, selesai):
         """Tentukan tag warna berdasarkan status deadline"""
         print(f"[DEBUG] Mulai: {mulai}, Target: {target}")  # log
 
-        if not mulai or mulai.strip() == "-":
-            return "belum"
 
         try:
-            if not target or target.strip() == "-":
-                return "normal"
 
             # Coba parsing waktu deadline
             target_dt = datetime.strptime(target.strip(), "%d-%m-%Y %H:%M")
+            if selesai:
+                selesai_dt = datetime.strptime(selesai.strip(), "%d-%m-%Y %H:%M:%S")
+
+                if selesai_dt < target_dt:
+                    return "selesai"
+            # print(f"selesai_dt: {selesai_dt}")
             now = datetime.now()
 
             print(f"[DEBUG] Now: {now}, Deadline: {target_dt}")  # log waktu
 
+
             if now > target_dt:
                 return "terlambat"
-
-            if (target_dt - now).total_seconds() < 1 * 3600:
+            elif (target_dt - now).total_seconds() < 1 * 3600:
                 return "warning"
+            elif not mulai or mulai.strip() == "-":
+                return "belum"
+            else:
+                return "normal"
 
-            return "normal"
         except Exception as e:
             print(f"[ERROR] Gagal parsing waktu: {e}")
-            return "normal"
+            # return "normal"
 
 
     def search(self):
