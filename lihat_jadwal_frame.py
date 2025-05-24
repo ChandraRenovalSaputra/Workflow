@@ -117,8 +117,7 @@ class LihatJadwalFrame(Frame):
 
     def auto_refresh(self):
         self.refresh_table()
-        # Refresh setiap 60 detik (60000 milidetik)
-        self.after(60000, self.auto_refresh)
+        self.after(20000, self.auto_refresh)
 
     def load_table(self, keyword=None, filter_status="semua"):
         if keyword is not None and keyword != "":
