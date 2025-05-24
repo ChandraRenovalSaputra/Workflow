@@ -1,4 +1,5 @@
 import sqlite3
+import re
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
@@ -27,6 +28,34 @@ import locale
 
 # Set locale ke Indonesia
 locale.setlocale(locale.LC_TIME, 'Indonesian')  # Untuk Windows
+
+
+def format_angka_with_dot(value):
+    raw = re.sub(r'[^\d]', '', value)
+    if raw == '':
+        return ''
+    return f"{int(raw):,}".replace(",", ".")
+
+def setup_ribuan_format(entry, var):
+    def on_change(*args):
+        current = var.get()
+        new_value = format_angka_with_dot(current)
+        if current != new_value:
+            var.set(new_value)
+    var.trace_add('write', on_change)
+    
+def format_dengan_titik(angka_str):
+        try:
+            angka = int(str(angka_str).replace('.', '').replace(',', '').strip())
+            return f"{angka:,}".replace(",", ".")
+        except:
+            return angka_str  # fallback
+        
+def safe_int(value):
+    try:
+        return int(str(value).replace(".", "").strip())
+    except:
+        return 0
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -63,7 +92,7 @@ class SPKInputFrame(tk.Frame):
             ("ORDER SALES",),
             ("NO PO",),
             ("COSTUMER",),
-            ("NAMA ARTIKEL",),
+            ("NAMA PRODUK",),
             ("QTY",),
             ("TANGGAL KIRIM", "date"),
             ("JENIS BAHAN",),
@@ -73,7 +102,6 @@ class SPKInputFrame(tk.Frame):
             ("INSHEET",),
             ("TOTAL CETAK",),
             ("WARNA",),
-            ("VARNISH",),
             ("FINISHING",),
         ]
 
@@ -178,15 +206,15 @@ class SPKInputFrame(tk.Frame):
             style = ttk.Style()
             style.theme_use("default")
             style.configure("my.DateEntry", 
-                          fieldbackground="white",
-                          background="#0078D7",
-                          foreground="black",
-                          arrowcolor="white",
-                          bordercolor="#ccc",
-                          lightcolor="#0078D7",
-                          darkcolor="#005a9e",
-                          relief="flat",
-                          padding=5)
+                        fieldbackground="white",
+                        background="#0078D7",
+                        foreground="black",
+                        arrowcolor="white",
+                        bordercolor="#ccc",
+                        lightcolor="#0078D7",
+                        darkcolor="#005a9e",
+                        relief="flat",
+                        padding=5)
 
             today = datetime.today().date()
             entry = DateEntry(
@@ -197,14 +225,24 @@ class SPKInputFrame(tk.Frame):
                 width=20,
                 style="my.DateEntry",
                 font=("Segoe UI", 14),
-                locale='id_ID'  # Format tanggal Indonesia
+                locale='id_ID'
             )
-
         else:
-            entry = tk.Entry(frame, font=("Segoe UI", 14)) 
+            entry = tk.Entry(frame, font=("Segoe UI", 14))
+
         entry.pack(side="left", fill="x", expand=True)
 
+        # ✅ Tambahkan auto-format jika field cocok
+        if label_text in ["QTY", "QTY BAHAN", "JUMLAH CETAK (DRUK)", "INSHEET", "TOTAL CETAK"]:
+            var = tk.StringVar()
+            entry.config(textvariable=var)
+            setup_ribuan_format(entry, var)
+        else:
+            var = tk.StringVar()
+            entry.config(textvariable=var)
+
         self.entries[label_text] = entry
+
 
     def clear_form(self):
         confirm = messagebox.askokcancel("Konfirmasi", "Apakah kamu yakin ingin menghapus semua data form?")
@@ -289,24 +327,23 @@ class SPKInputFrame(tk.Frame):
                 INSERT INTO spk (
                     order_sales, no_po, costumer, nama_artikel, qty, tanggal_kirim,
                     jenis_bahan, qty_bahan, ukuran_cetak, jumlah_cetak, insheet,
-                    total_cetak, warna, varnish, finishing,
+                    total_cetak, warna, finishing,
                     gambar_desain, gambar_dummy, gambar_potong
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data["ORDER SALES"],
                 data["NO PO"],
                 data["COSTUMER"],
-                data["NAMA ARTIKEL"],
-                int(data["QTY"]),
+                data["NAMA PRODUK"],
+                safe_int(data["QTY"]),
                 data["TANGGAL KIRIM"],
                 data["JENIS BAHAN"],
-                data["QTY BAHAN"],
+                safe_int(data["QTY BAHAN"]),
                 data["UKURAN CETAK"],
-                data["JUMLAH CETAK (DRUK)"],
-                data["INSHEET"],
-                data["TOTAL CETAK"],
+                safe_int(data["JUMLAH CETAK (DRUK)"]),
+                safe_int(data["INSHEET"]),
+                safe_int(data["TOTAL CETAK"]),
                 data["WARNA"],
-                data["VARNISH"],
                 data["FINISHING"],
                 gambar_desain_path,
                 gambar_dummy_path,
@@ -347,7 +384,7 @@ class SPKInputFrame(tk.Frame):
 
             # Generate PDF
             costumer = data["COSTUMER"].replace(" ", "_")
-            artikel = data["NAMA ARTIKEL"].replace(" ", "_")
+            artikel = data["NAMA PRODUK"].replace(" ", "_")
             pdf_filename = f"{costumer}_{artikel}.pdf"
             
             try:
@@ -423,12 +460,14 @@ class SPKInputFrame(tk.Frame):
             info_umum_data = [
                 [Paragraph("Keterangan Produk", title_style), ""],
                 ["Nomor SPK", f"SPK-{data.get('id', '')}"],
-                ["Tanggal Kirim", data.get("tanggal_kirim", "")],
-                ["Customer", data.get("costumer", "")],
                 ["Order Sales", data.get("order_sales", "")],
                 ["No PO", data.get("no_po", "")],
-                ["Nama Artikel", data.get("nama_artikel", "")]
+                ["Customer", data.get("costumer", "")],
+                ["Nama Produk", data.get("nama_artikel", "")],
+                ["Qty", format_dengan_titik(data.get("qty", ""))],            
+                ["Tanggal Kirim", data.get("tanggal_kirim", "")]                                       
             ]
+
 
             col_widths = [5 * cm, 10 * cm]
             total_table_width = sum(col_widths)
@@ -452,13 +491,12 @@ class SPKInputFrame(tk.Frame):
             table_data = [
                 [Paragraph("Spesifikasi Produk", title_style), ""],
                 ["Jenis Bahan", data.get("jenis_bahan", "")],
-                ["Qty Bahan", data.get("qty_bahan", "")],
+                ["Qty Bahan", format_dengan_titik(data.get("qty_bahan", ""))],
                 ["Ukuran Cetak", data.get("ukuran_cetak", "")],
-                ["Jumlah Cetak", data.get("jumlah_cetak", "")],
-                ["Insheet", data.get("insheet", "")],
-                ["Total Cetak", data.get("total_cetak", "")],
+                ["Jumlah Cetak", format_dengan_titik(data.get("jumlah_cetak", ""))],
+                ["Insheet", format_dengan_titik(data.get("insheet", ""))],
+                ["Total Cetak", format_dengan_titik(data.get("total_cetak", ""))],
                 ["Warna", data.get("warna", "")],
-                ["Varnish", data.get("varnish", "")],
                 ["Finishing", data.get("finishing", "")]
             ]
 
@@ -600,7 +638,7 @@ class SPKInputFrame(tk.Frame):
 
         self.tahapan_options = [
             "DESAIN", "ACC DESAIN", "DUMMY", "CTP", "POTONG BAHAN", "CETAK",
-            "POND", "FORMING", "LAMINATING", "PACKING", "POLI", "EMBOS", "SPOT UV", 
+            "POND", "FORMING", "LAMINATING / VARNISH", "PACKING", "POLI", "EMBOS", "SPOT UV", 
             "LEM", "SPIRAL"
         ]
 

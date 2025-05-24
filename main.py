@@ -6,6 +6,7 @@ from db import tambah_colom_db
 from multi_scanner_listener import start_all_scanners
 from backup_db import BackupManager
 import threading
+from lihat_jadwal_frame import LihatJadwalFrame
 
 create_tables()
 create_spk_tables()
@@ -89,9 +90,25 @@ class App(tk.Tk):
 def run_scanner_listener():
     start_all_scanners()
 
+def tampilkan_jadwal_di_tv(root):
+    from lihat_jadwal_frame import LihatJadwalFrame
+    tv_window = tk.Toplevel(root)
+    tv_window.title("Layar Jadwal - TV")
+
+    # Fullscreen di monitor ke-2 (misal letaknya di kanan)
+    screen_width = tv_window.winfo_screenwidth()
+    screen_height = tv_window.winfo_screenheight()
+    tv_window.geometry(f"{screen_width}x{screen_height}+{screen_width}+0")
+    tv_window.attributes("-fullscreen", True)
+    tv_window.configure(bg="white")
+
+    frame_tv = LihatJadwalFrame(tv_window, root)
+    frame_tv.pack(fill="both", expand=True)
+
 if __name__ == "__main__":
     scanner_thread = threading.Thread(target=run_scanner_listener, daemon=True)
     scanner_thread.start()
 
     app = App()
+    app.after(2000, lambda: tampilkan_jadwal_di_tv(app))  # panggil setelah app siap
     app.mainloop()
