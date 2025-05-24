@@ -3,6 +3,7 @@ import os
 import sqlite3
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
+from tkinter import messagebox
 
 
 class BackupManager:
@@ -69,7 +70,12 @@ class BackupManager:
         if self.scheduler.running:
             self.scheduler.shutdown(wait=False)
             print("Backup scheduler stopped")
-    
+
     def manual_backup(self):
-        for db_path, backup_dir in self.databases:
-            self._perform_backup(db_path, backup_dir)
+        try:
+            for db_path, backup_dir in self.databases:
+                self._perform_backup(db_path, backup_dir)
+            messagebox.showinfo("Sukses", "Backup manual berhasil")
+        except Exception as e:
+            print(f"Backup manual gagal: {str(e)}")
+            messagebox.showerror("Error", "Backup manual gagal")
