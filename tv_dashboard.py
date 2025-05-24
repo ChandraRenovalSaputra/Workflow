@@ -10,7 +10,7 @@ class TVLihatJadwal(tk.Toplevel):
         self.configure(bg="#ecf0f1")
 
         # Pasang frame jadwal
-        self.jadwal_frame = LihatJadwalFrame(self, controller=root)
+        self.jadwal_frame = LihatJadwalFrame(self, controller=root, readonly=True)
         self.jadwal_frame.pack(fill="both", expand=True)
         self.jadwal_frame.auto_refresh()
 
@@ -27,3 +27,13 @@ class TVLihatJadwal(tk.Toplevel):
         tv = TVLihatJadwal(self.controller)
         self.controller.tv_window = tv  # 🆕 simpan referensi
         tv.focus_set()
+
+    def auto_scroll(self):
+        try:
+            # Akses widget ScrollableFrame
+            scrollable_frame = self.jadwal_frame.children["!scrollableframe"]
+            canvas = scrollable_frame.canvas
+            canvas.yview_scroll(3, "units")  # scroll pelan ke bawah
+        except Exception as e:
+            print("Auto-scroll error:", e)
+        self.after(5000, self.auto_scroll)  # setiap 5 detik

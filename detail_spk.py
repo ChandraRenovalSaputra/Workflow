@@ -32,7 +32,6 @@ class DetailSPKFrame(Frame):
         self.controller = controller
         self.spk_id = spk_id
         self.configure(bg="#f0f2f5")
-        self.auto_refresh()
 
         # === HEADER ===
         header = Frame(self, bg="#0078D7", height=60)
@@ -469,7 +468,3 @@ class DetailSPKFrame(Frame):
             )
 
         conn.close()
-
-    def auto_refresh(self):
-        self.load_data()
-        self.after(10000, self.auto_refresh)  # refresh setiap 10 detik
