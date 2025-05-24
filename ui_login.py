@@ -99,7 +99,7 @@ class LoginFrame(tk.Frame):
         entry.grid(row=row + 1, column=0, columnspan=2, pady=(0, 20))
         return entry
     
-    def custom_messagebox(parent, title, message, type="error"):
+    def custom_messagebox(self, parent, title, message, type="error"):
         top = tk.Toplevel(parent)
         top.title(title)
         top.transient(parent)
