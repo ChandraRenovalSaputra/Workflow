@@ -758,8 +758,8 @@ class SPKInputFrame(tk.Frame):
         tambah_frame.pack(pady=20, padx=20, fill="x", ipady=15)
 
         self.tahapan_options = [
-            "DESAIN", "ACC DESAIN", "DUMMY", "CTP", "POTONG BAHAN", "CETAK",
-            "POND", "FORMING", "LAMINATING / VARNISH", "PACKING", "POLI", "EMBOS", "SPOT UV", 
+            "DESAIN", "ACC DESAIN", "CTP", "POTONG BAHAN", "CETAK",
+            "POND", "FORMING", "LAMINATING / VARNISH", "POLI", "EMBOS", "SPOT UV", 
             "LEM", "SPIRAL"
         ]
 

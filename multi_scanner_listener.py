@@ -5,7 +5,18 @@ from db import get_workflow_conn
 
 SCANNER_MAP = {
     "COM6": "DESAIN",
-    "COM7": "ACC DESAIN"
+    "COM7": "ACC DESAIN",
+    "COM8": "CTP",
+    "COM9": "POTONG BAHAN",
+    "COM10": "CETAK",
+    "COM11": "POND",
+    "COM12": "FORMING",
+    "COM13": "LAMINATING / VARNISH",
+    "COM14": "POLI",
+    "COM15": "EMBOS",
+    "COM16": "SPOT UV",
+    "COM17": "LEM",
+    "COM18": "SPIRAL",
 }
 
 
