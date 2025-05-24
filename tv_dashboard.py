@@ -4,9 +4,9 @@ from lihat_jadwal_frame import LihatJadwalFrame
 class TVLihatJadwal(tk.Toplevel):
     def __init__(self, root):
         super().__init__(root)
-        self.root = root  # simpan referensi ke root utama
+        self.root = root
         self.title("Lihat Jadwal SPK - TV Monitor")
-        self.attributes('-fullscreen', True)
+        self.state("zoomed")  # ✅ fullscreen dengan titlebar (lebih stabil)
         self.configure(bg="#ecf0f1")
 
         # Pasang frame jadwal
@@ -14,26 +14,24 @@ class TVLihatJadwal(tk.Toplevel):
         self.jadwal_frame.pack(fill="both", expand=True)
         self.jadwal_frame.auto_refresh()
 
-        # Bind tombol ESC untuk keluar fullscreen
-        self.bind("<Escape>", self.keluar_fullscreen)  # ✅ panggil method pakai self
+        # Tombol ESC untuk keluar dari mode TV
+        self.bind("<Escape>", self.keluar_fullscreen)
 
-    def keluar_fullscreen(self, event=None):  # ✅ method class yang benar
-        self.root.tv_window = None  # bersihkan referensi TV
+    def keluar_fullscreen(self, event=None):
+        self.root.tv_window = None
         self.destroy()
-        self.root.state("zoomed")  # kembali ke fullscreen
-
+        self.root.state("zoomed")
 
     def tampilkan_tv(self):
         tv = TVLihatJadwal(self.controller)
-        self.controller.tv_window = tv  # 🆕 simpan referensi
+        self.controller.tv_window = tv
         tv.focus_set()
 
     def auto_scroll(self):
         try:
-            # Akses widget ScrollableFrame
             scrollable_frame = self.jadwal_frame.children["!scrollableframe"]
             canvas = scrollable_frame.canvas
-            canvas.yview_scroll(3, "units")  # scroll pelan ke bawah
+            canvas.yview_scroll(3, "units")
         except Exception as e:
             print("Auto-scroll error:", e)
-        self.after(5000, self.auto_scroll)  # setiap 5 detik
+        self.after(5000, self.auto_scroll)
