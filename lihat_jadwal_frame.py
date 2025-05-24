@@ -310,4 +310,4 @@ class LihatJadwalFrame(Frame):
 
     def auto_refresh(self):
         self.refresh_table()
-        self.after(10000, self.auto_refresh)  # setiap 60 detik
+        self.after(10000, self.auto_refresh)  

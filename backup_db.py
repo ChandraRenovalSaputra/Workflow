@@ -71,11 +71,32 @@ class BackupManager:
             self.scheduler.shutdown(wait=False)
             print("Backup scheduler stopped")
 
-    def manual_backup(self):
+    def manual_backup(self, flashdisk_drive="E:\\backup_sistem"):
         try:
-            for db_path, backup_dir in self.databases:
-                self._perform_backup(db_path, backup_dir)
-            messagebox.showinfo("Sukses", "Backup manual berhasil")
+            for db_name, db_path in self.databases:
+                timestamp = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+                db_name_only = os.path.splitext(os.path.basename(db_name))[0]  # e.g. 'users' from 'users.db'
+
+                # Buat folder sesuai nama database: 'users' atau 'workflow'
+                backup_folder = os.path.join(flashdisk_drive, db_name_only)
+                os.makedirs(backup_folder, exist_ok=True)
+
+                backup_path = os.path.join(backup_folder, f"{db_name_only}_{timestamp}.db")
+                print(f"Backup ke: {backup_path}")
+
+                src = sqlite3.connect(db_name)
+                dst = sqlite3.connect(backup_path)
+
+                with dst:
+                    src.backup(dst, pages=1)
+
+                src.close()
+                dst.close()
+
+                print(f"✅ Backup berhasil: {backup_path}")
+
+            messagebox.showinfo("Sukses", f"Backup berhasil ke flashdisk")
+
         except Exception as e:
-            print(f"Backup manual gagal: {str(e)}")
-            messagebox.showerror("Error", "Backup manual gagal")
+            print(f"❌ Backup gagal: {str(e)}")
+            messagebox.showerror("Gagal", f"Backup ke flashdisk gagal")
