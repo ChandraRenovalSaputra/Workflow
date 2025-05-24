@@ -12,6 +12,7 @@ class LihatJadwalFrame(Frame):
         super().__init__(parent)
         self.controller = controller
         self.configure(bg="#ecf0f1")
+        self.auto_refresh()
 
         Label(
             self,
@@ -284,8 +285,11 @@ class LihatJadwalFrame(Frame):
 
         self.controller.switch_frame(DashboardFrame)
 
-
     def filter_data(self):
         keyword = self.search_var.get()
         filter_status = self.filter_var.get()
         self.load_table(keyword, filter_status)
+
+    def auto_refresh(self):
+        self.refresh_table()
+        self.after(10000, self.auto_refresh)  # setiap 60 detik

@@ -40,6 +40,7 @@ class App(tk.Tk):
         super().__init__()
         self.title("Sistem Workflow Percetakan")
         self.current_user = None  # 🆕 Tambahkan ini untuk menyimpan data user login
+        self.tv_window = None
 
         # Atur ukuran window dan posisikan di tengah layar
         center_window(self, 1600, 800)
@@ -110,5 +111,5 @@ if __name__ == "__main__":
     scanner_thread.start()
 
     app = App()
-    app.after(2000, lambda: tampilkan_jadwal_di_tv(app))  # panggil setelah app siap
+    # app.after(2000, lambda: tampilkan_jadwal_di_tv(app))  # panggil setelah app siap
     app.mainloop()
