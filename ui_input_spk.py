@@ -382,6 +382,13 @@ class SPKInputFrame(tk.Frame):
 
             conn.commit()
 
+            # 🆕 Jika TV terbuka, paksa refresh tabelnya
+            if hasattr(self.controller, "tv_window") and self.controller.tv_window is not None:
+                try:
+                    self.controller.tv_window.jadwal_frame.refresh_table()
+                except Exception as e:
+                    print(f"Gagal refresh TV: {e}")
+
             # Generate PDF
             costumer = data["COSTUMER"].replace(" ", "_")
             artikel = data["NAMA PRODUK"].replace(" ", "_")
