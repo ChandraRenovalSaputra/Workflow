@@ -1,3 +1,4 @@
+import utils.session
 import tkinter as tk
 from tkinter import ttk
 from ui_login import LoginFrame

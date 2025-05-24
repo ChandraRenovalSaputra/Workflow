@@ -8,11 +8,11 @@ from scrollable_frame import ScrollableFrame
 
 
 class LihatJadwalFrame(Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller, readonly=False):  # default False
         super().__init__(parent)
         self.controller = controller
+        self.readonly = readonly
         self.configure(bg="#ecf0f1")
-        self.auto_refresh()
 
         Label(
             self,
@@ -115,9 +115,9 @@ class LihatJadwalFrame(Frame):
         print("Data yang diambil: ", rows)
 
         for row in rows:
-            print(f"ID: {row[1]}, Status: {row[3]}")  # Kolom 3 adalah status
+            print(f"ID: {row[1]}, Status: {row[3]}")
 
-        # 🔍 Filter berdasarkan tahap
+        # 🔍 Filter berdasarkan status
         if filter_status == "berjalan":
             rows = [r for r in rows if r[3].lower() != "selesai"]
         elif filter_status == "selesai":
@@ -128,15 +128,14 @@ class LihatJadwalFrame(Frame):
 
         print(f"Data setelah filter status '{filter_status}': ", rows)
 
-        # 🔁 Ambil hanya tahap terakhir per SPK (berdasarkan waktu mulai terbaru)
+        # 🔁 Ambil hanya tahap terakhir per SPK
         filtered_rows = {}
         for row in rows:
-            spk_id = row[1]  # Kolom ke-2 = SPK ID
-            if spk_id not in filtered_rows or row[5] > filtered_rows[spk_id][5]:  # Kolom ke-6 = waktu mulai
+            spk_id = row[1]
+            if spk_id not in filtered_rows or row[5] > filtered_rows[spk_id][5]:
                 filtered_rows[spk_id] = row
 
         rows = list(filtered_rows.values())
-
 
         headers = [
             "📝 Nama Pekerjaan",
@@ -176,21 +175,19 @@ class LihatJadwalFrame(Frame):
 
         # 🔷 Baris data
         for i, row in enumerate(rows, start=1):
-            row_to_display = row[:3] + row[4:]  # skip kolom ke-3 (status)
-            print(row)
-            tag = self.get_row_tag(row[5], row[7], row[6])  # mulai = row[5], deadline = row[7]
+            row_to_display = row[:3] + row[4:]
+            tag = self.get_row_tag(row[5], row[7], row[6])
 
             if tag == "belum" or tag == "normal":
-                bg_color = "#f7f9fa"  
+                bg_color = "#f7f9fa"
             elif tag == "terlambat":
-                bg_color = "#ff6f61"  
+                bg_color = "#ff6f61"
             elif tag == "warning":
-                bg_color = "#ffeb3b"  
+                bg_color = "#ffeb3b"
             elif tag == "sedang":
-                bg_color = "#00e676"  
+                bg_color = "#00e676"
             else:
-                bg_color = "#a5d6a7"  
-
+                bg_color = "#a5d6a7"
 
             for j, val in enumerate(row_to_display):
                 font_style = ("Segoe UI", 14, "bold") if j == 3 else ("Segoe UI", 14)
@@ -206,23 +203,33 @@ class LihatJadwalFrame(Frame):
                     height=2,
                 ).grid(row=i, column=j, sticky="nsew")
 
-
-            Button(
-                self.table_frame,
-                text="ℹ️ Detail",
-                bg="#0984e3",
-                fg="white",
-                font=("Segoe UI", 12, "bold"),
-                cursor="hand2",
-                activebackground="#74b9ff",
-                command=lambda sid=row[1]: self.lihat_detail(sid),
-            ).grid(row=i, column=len(headers) - 1, sticky="nsew", ipadx=10, pady=2)
-
-
+            # 🔍 Aksi - tombol atau label tergantung readonly
+            if hasattr(self, "readonly") and self.readonly:
+                Label(
+                    self.table_frame,
+                    text="-",
+                    font=("Segoe UI", 14),
+                    width=column_widths[-1],
+                    bg=bg_color,
+                    relief=RIDGE,
+                    height=2,
+                ).grid(row=i, column=len(headers) - 1, sticky="nsew")
+            else:
+                Button(
+                    self.table_frame,
+                    text="ℹ️ Detail",
+                    bg="#0984e3",
+                    fg="white",
+                    font=("Segoe UI", 12, "bold"),
+                    cursor="hand2",
+                    activebackground="#74b9ff",
+                    command=lambda sid=row[1]: self.lihat_detail(sid),
+                ).grid(row=i, column=len(headers) - 1, sticky="nsew", ipadx=10, pady=2)
 
         # Responsif
         for col in range(len(headers)):
             self.table_frame.grid_columnconfigure(col, weight=1)
+
 
     def lihat_detail(self, spk_id):
         print(f"🔍 Pindah ke halaman detail untuk SPK ID: {spk_id}")
