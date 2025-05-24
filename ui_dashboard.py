@@ -51,7 +51,7 @@ class DashboardFrame(tk.Frame):
         self.create_nav_button(button_frame, "🖥 Tampilkan ke TV", "#9333ea", self.tampilkan_tv)
 
         # === Footer ===
-        footer = tk.Label(self, text="© 2025 PT Percetakan", font=("Segoe UI", 10),
+        footer = tk.Label(self, text="© 2025 PT Muka Indo", font=("Segoe UI", 10),
                           bg="#f4f6f9", fg="#9ca3af")
         footer.pack(side="bottom", pady=20)
 
