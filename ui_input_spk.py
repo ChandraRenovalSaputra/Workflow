@@ -420,7 +420,7 @@ class SPKInputFrame(tk.Frame):
             error_msg += "1. Semua field wajib diisi\n"
             error_msg += "2. Gambar yang diupload valid\n"
             error_msg += "3. Database tersedia dan tidak terkunci"
-            messagebox.showerror("Gagal Simpan", error_msg)
+            messagebox.showerror("Gagal Simpan", "Gagal menyimpan data")
             print(traceback.format_exc())
         finally:
             if 'conn' in locals():
@@ -874,18 +874,40 @@ class SPKInputFrame(tk.Frame):
         return "end"
 
     def sort_estimasi_table(self):
-        items = [(self.estimasi_table.item(item, "values"), item) 
+        items = [(self.estimasi_table.item(item, "values"), item)
                 for item in self.estimasi_table.get_children()]
 
-        items.sort(key=lambda x: datetime.strptime(x[0][1], "%Y-%m-%d %H:%M"))
+        items.sort(key=lambda x: datetime.strptime(x[0][1], "%d-%m-%Y %H:%M"))
 
         for index, (_, item) in enumerate(items):
             self.estimasi_table.move(item, "", index)
 
+    def change_format_date(self, data: list[tuple], before: str, after: str):
+        """untuk merubah format str yang diinginkan"""
+        for idx, item in enumerate(data):
+            date = datetime.strptime(item[1][1], before).strftime(after)
+            data[idx] = (item[0], (item[1][0], date, item[1][2]))
+        return data
+
     def sort_estimasi_rows(self):
-        sorted_estimasi_rows = sorted(
-            self.estimasi_rows.items(), key=lambda x: x[1][1]
+        print(list(self.estimasi_rows.items()))
+        estimasi_rows = self.change_format_date(
+            data=list(self.estimasi_rows.items()),
+            before="%d-%m-%Y %H:%M",
+            after="%Y-%m-%d %H:%M"
         )
+
+        sorted_estimasi_rows = sorted(
+            estimasi_rows, key=lambda x: x[1][1]
+        )
+
+        sorted_estimasi_rows = self.change_format_date(
+            data=sorted_estimasi_rows,
+            before="%Y-%m-%d %H:%M",
+            after="%d-%m-%Y %H:%M"
+        )
+
+        print(f"sorted estimasi: {sorted_estimasi_rows}")
         return {key: value for key, value in sorted_estimasi_rows}
 
     def tambah_tahapan(self):

@@ -1,9 +1,8 @@
 from datetime import datetime
 from tkinter import *
-from tkinter import Frame, Label, Button, ttk
+from tkinter import Frame, Label, Button
 from db import get_jadwal_pekerjaan, get_workflow_conn, search_jadwal
 from detail_spk import show_spk_detail
-from datetime import datetime
 from scrollable_frame import ScrollableFrame
 from backup_db import BackupManager
 
@@ -115,15 +114,12 @@ class LihatJadwalFrame(Frame):
         ).pack(side=LEFT, padx=10)
         self.auto_refresh()
 
-    def auto_refresh(self):
-        self.refresh_table()
-        self.after(20000, self.auto_refresh)
-
     def load_table(self, keyword=None, filter_status="semua"):
         if keyword is not None and keyword != "":
             rows = search_jadwal(keyword)
         else:
             rows = get_jadwal_pekerjaan()
+            print(f"rows: {rows}")
 
         print("Data yang diambil: ", rows)
 

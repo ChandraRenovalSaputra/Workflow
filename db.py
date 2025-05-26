@@ -131,7 +131,6 @@ def get_jadwal_pekerjaan():
     return rows
 
 
-
 def get_spk_details(spk_id):
     conn = get_workflow_conn()
     cursor = conn.cursor()
@@ -160,7 +159,10 @@ def get_spk_details(spk_id):
         LEFT JOIN spk_tracking tr ON t.spk_id = tr.spk_id AND t.nama_tahapan = tr.tahapan
         WHERE t.spk_id = ?
         GROUP BY t.nama_tahapan
-        ORDER BY t.mulai ASC
+        ORDER BY
+            substr(t.mulai, 7, 4) || '-' || 
+            substr(t.mulai, 4, 2) || '-' || 
+            substr(t.mulai, 1, 2) ASC
     """,
         (spk_id,),
     )
