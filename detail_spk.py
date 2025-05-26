@@ -260,6 +260,7 @@ class DetailSPKFrame(Frame):
                     bg=entry_bg,
                     relief="solid",
                     bd=1,
+                    width=60,
                     wrap="word",
                 )
                 text_widget.insert("1.0", text_value)
