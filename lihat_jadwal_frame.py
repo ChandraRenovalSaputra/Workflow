@@ -50,10 +50,10 @@ class LihatJadwalFrame(Frame):
         ).pack(side=LEFT)
 
         # 🧾 Scrollable Tabel
-        scrollable = ScrollableFrame(self)
-        scrollable.pack(padx=30, pady=10, fill=BOTH, expand=True)
+        self.scrollable = ScrollableFrame(self)
+        self.scrollable.pack(padx=30, pady=10, fill=BOTH, expand=True)
+        self.table_frame = self.scrollable.scrollable_frame
 
-        self.table_frame = scrollable.scrollable_frame
 
         self.filter_var = StringVar()
         self.filter_var.set("semua")  # Defaultnya semua
@@ -146,7 +146,7 @@ class LihatJadwalFrame(Frame):
 
         rows = list(filtered_rows.values())
 
-        headers = [
+        self.headers = [
             "📝 Nama Pekerjaan",
             "🆔 ID",
             "📄 PO",
@@ -159,7 +159,7 @@ class LihatJadwalFrame(Frame):
         column_widths = [23, 15, 15, 17, 15, 15, 15, 8]
 
         # 🔶 Header
-        for col, (text, width) in enumerate(zip(headers, column_widths)):
+        for col, (text, width) in enumerate(zip(self.headers, column_widths)):
             Label(
                 self.table_frame,
                 text=text,
@@ -179,7 +179,7 @@ class LihatJadwalFrame(Frame):
                 font=("Segoe UI", 12),
                 bg="white",
                 fg="gray",
-            ).grid(row=1, column=0, columnspan=len(headers), pady=40)
+            ).grid(row=1, column=0, columnspan=len(self.headers), pady=40)
             return
 
         # 🔷 Baris data
@@ -222,7 +222,7 @@ class LihatJadwalFrame(Frame):
                     bg=bg_color,
                     relief=RIDGE,
                     height=2,
-                ).grid(row=i, column=len(headers) - 1, sticky="nsew")
+                ).grid(row=i, column=len(self.headers) - 1, sticky="nsew")
             else:
                 Button(
                     self.table_frame,
@@ -233,10 +233,10 @@ class LihatJadwalFrame(Frame):
                     cursor="hand2",
                     activebackground="#74b9ff",
                     command=lambda sid=row[1]: self.lihat_detail(sid),
-                ).grid(row=i, column=len(headers) - 1, sticky="nsew", ipadx=10, pady=2)
+                ).grid(row=i, column=len(self.headers) - 1, sticky="nsew", ipadx=10, pady=2)
 
         # Responsif
-        for col in range(len(headers)):
+        for col in range(len(self.headers)):
             self.table_frame.grid_columnconfigure(col, weight=1)
 
 
@@ -280,10 +280,11 @@ class LihatJadwalFrame(Frame):
         self.load_table(keyword)
 
     def refresh_table(self):
-        for widget in self.table_frame.winfo_children():
-            widget.destroy()
-        self.load_table()
+        keyword = self.search_var.get()
+        filter_status = self.filter_var.get()
+        self.load_table(keyword, filter_status)
         self.update_idletasks()
+
 
     def open_scanner(self):
         from scanner_ui import ScannerApp
@@ -304,5 +305,8 @@ class LihatJadwalFrame(Frame):
         self.load_table(keyword, filter_status)
 
     def auto_refresh(self):
-        self.refresh_table()
-        self.after(10000, self.auto_refresh)  
+        keyword = self.search_var.get()
+        filter_status = self.filter_var.get()
+        self.load_table(keyword, filter_status)
+        self.after(10000, self.auto_refresh)
+  
