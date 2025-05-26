@@ -39,7 +39,7 @@ class TVLihatJadwal(tk.Toplevel):
             column_count = len(self.jadwal_frame.headers)
             row_count = total_widgets // column_count - 1 
 
-            if row_count > 10:
+            if row_count > 7:
                 canvas.yview_scroll(7 * self.scroll_direction, "units")
                 top, bottom = canvas.yview()
                 if bottom >= 1.0:

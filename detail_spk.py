@@ -247,24 +247,27 @@ class DetailSPKFrame(Frame):
                 ).grid(row=row, column=4, sticky="nsew", padx=5, pady=6)
 
                 # Keterangan Entry
-                keterangan_var = StringVar(value=keterangan if keterangan else "")
-                self.keterangan_vars.append((tahap, keterangan_var))
-
                 entry_bg = "#ffffff"
+                text_value = keterangan if keterangan else ""
                 if status == "TERLAMBAT" and not keterangan:
-                    keterangan_var.set("Harap isi alasan keterlambatan")
-                    entry_bg = "#ffeeba"  # kuning soft
+                    text_value = "Harap isi alasan keterlambatan"
+                    entry_bg = "#ffeeba"
 
-                Entry(
+                text_widget = Text(
                     workflow_frame,
-                    textvariable=keterangan_var,
+                    height=3,
                     font=base_font,
                     bg=entry_bg,
                     relief="solid",
                     bd=1,
-                    highlightthickness=1,
-                    highlightbackground="#ccc",
-                ).grid(row=row, column=5, sticky="nsew", padx=5, pady=6, ipady=6)
+                    wrap="word",
+                )
+                text_widget.insert("1.0", text_value)
+                text_widget.grid(row=row, column=5, sticky="nsew", padx=5, pady=6)
+
+                # Simpan tahap dan widget-nya
+                self.keterangan_vars.append((tahap, text_widget))
+
 
         # === BUTTONS ===
         button_frame = Frame(self.scrollable_frame, bg="#f0f2f5")
@@ -338,8 +341,9 @@ class DetailSPKFrame(Frame):
     def simpan_keterangan(self):
         """Validasi dan simpan keterangan ke database"""
         # Validasi untuk tahap yang terlambat
-        for tahap, var in self.keterangan_vars:
-            if "TERLAMBAT" in var.get() and not var.get().strip():
+        for tahap, widget in self.keterangan_vars:
+            value = widget.get("1.0", "end").strip()
+            if "TERLAMBAT" in widget.get("1.0", "end") and not value:
                 messagebox.showerror(
                     "Error",
                     f"Keterangan wajib diisi untuk tahap {tahap} yang terlambat!",
@@ -351,15 +355,16 @@ class DetailSPKFrame(Frame):
             conn = sqlite3.connect("workflow.db")
             cursor = conn.cursor()
 
-            for tahap, var in self.keterangan_vars:
-                if var.get().strip():  # Hanya simpan jika ada isinya
+            for tahap, widget in self.keterangan_vars:
+                value = widget.get("1.0", "end").strip()
+                if value:  # Hanya simpan jika ada isinya
                     cursor.execute(
                         """
                         UPDATE spk_tahapan 
                         SET keterangan = ?
                         WHERE spk_id = ? AND nama_tahapan = ?
-                    """,
-                        (var.get(), self.spk_id, tahap),
+                        """,
+                        (value, self.spk_id, tahap),
                     )
 
             conn.commit()
@@ -367,6 +372,7 @@ class DetailSPKFrame(Frame):
             messagebox.showinfo("Sukses", "Keterangan berhasil disimpan!")
         except Exception as e:
             messagebox.showerror("Error", f"Gagal menyimpan ke database: {str(e)}")
+
 
     def kembali_ke_jadwal(self):
         from lihat_jadwal_frame import LihatJadwalFrame
