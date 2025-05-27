@@ -17,8 +17,29 @@ class BarcodeScanner:
         if not cursor.fetchone():
             return {"status": "error", "message": f"❌ SPK {spk_id} tidak ditemukan"}
 
+        # 🔒 Cek apakah tahapan sebelumnya sudah selesai
+        cursor.execute("""
+            SELECT nama_tahapan FROM spk_tahapan 
+            WHERE spk_id = ? ORDER BY id ASC
+        """, (spk_id,))
+        semua_tahapan = [row[0] for row in cursor.fetchall()]
+
+        if tahapan in semua_tahapan:
+            idx = semua_tahapan.index(tahapan)
+            if idx > 0:
+                tahapan_sebelumnya = semua_tahapan[idx - 1]
+                cursor.execute("""
+                    SELECT scan_selesai FROM spk_tracking 
+                    WHERE spk_id = ? AND tahapan = ? 
+                    ORDER BY id DESC LIMIT 1
+                """, (spk_id, tahapan_sebelumnya))
+                hasil = cursor.fetchone()
+                if not hasil or not hasil[0]:
+                    return {"status": "warning", "message": f"🚫 Tahapan sebelumnya '{tahapan_sebelumnya}' belum selesai.\nTidak bisa melanjutkan ke '{tahapan}'."}
+
         now = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
+        # Lanjutkan seperti biasa
         cursor.execute("""
             SELECT id, scan_mulai, scan_selesai FROM spk_tracking
             WHERE spk_id = ? AND tahapan = ?
