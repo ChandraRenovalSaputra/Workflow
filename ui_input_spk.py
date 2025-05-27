@@ -25,6 +25,7 @@ from reportlab.platypus import Paragraph
 from reportlab.lib.units import cm
 from reportlab.lib import colors
 import locale
+import sys, os
 
 # Set locale ke Indonesia
 locale.setlocale(locale.LC_TIME, 'Indonesian')  # Untuk Windows
@@ -259,6 +260,14 @@ class SPKInputFrame(tk.Frame):
                 self.estimasi_table.delete(row)
             self.estimasi_rows.clear()
         # Jika batal, tidak terjadi apa-apa
+    def resource_path(relative_path):
+        """Mendapatkan path absolut yang kompatibel saat dibundel PyInstaller"""
+        try:
+            base_path = sys._MEIPASS
+        except AttributeError:
+            base_path = os.path.abspath(".")
+
+        return os.path.join(base_path, relative_path)
 
     def save_spk(self):
         # Validasi input
