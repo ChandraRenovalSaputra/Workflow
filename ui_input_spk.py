@@ -37,26 +37,57 @@ def format_angka_with_dot(value):
         return ''
     return f"{int(raw):,}".replace(",", ".")
 
-def setup_ribuan_format(entry, var):
+def setup_ribuan_format(var):
     def on_change(*args):
         current = var.get()
         new_value = format_angka_with_dot(current)
         if current != new_value:
             var.set(new_value)
     var.trace_add('write', on_change)
-    
+
 def format_dengan_titik(angka_str):
         try:
             angka = int(str(angka_str).replace('.', '').replace(',', '').strip())
             return f"{angka:,}".replace(",", ".")
         except:
             return angka_str  # fallback
-        
+
 def safe_int(value):
     try:
         return int(str(value).replace(".", "").strip())
     except:
         return 0
+
+
+def format_time(value):
+    cleaned = "".join(filter(str.isdigit, value))
+
+    if not cleaned:
+        return ""
+
+    cleaned = cleaned[:4]
+
+    if len(cleaned) == 1:
+        # Contoh: "9" -> "09:00"
+        return f"0{cleaned}:00"
+    elif len(cleaned) == 2:
+        # Contoh: "09" -> "09:00", "10" -> "10:00"
+        return f"{cleaned}:00"
+    elif len(cleaned) == 3:
+        # Contoh: "900" -> "09:00", "945" -> "09:45"
+        return f"0{cleaned[0]}:{cleaned[1:3]}"
+    else:  # 4 digit
+        # Contoh: "0900" -> "09:00", "0945" -> "09:45"
+        return f"{cleaned[:2]}:{cleaned[2:4]}"
+
+
+def setup_format_jam(var):
+    def on_change(*args):
+        current = var.get()
+        new_value = format_time(current)
+        if current != new_value:
+            var.set(new_value)
+    var.trace_add('write', on_change)
 
 class SPKInputFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -237,7 +268,7 @@ class SPKInputFrame(tk.Frame):
         if label_text in ["QTY", "QTY BAHAN", "JUMLAH CETAK (DRUK)", "INSHEET", "TOTAL CETAK"]:
             var = tk.StringVar()
             entry.config(textvariable=var)
-            setup_ribuan_format(entry, var)
+            setup_ribuan_format(var)
         else:
             var = tk.StringVar()
             entry.config(textvariable=var)
@@ -792,14 +823,18 @@ class SPKInputFrame(tk.Frame):
         self.mulai_tanggal = DateEntry(tambah_frame, width=12, date_pattern="dd-mm-yyyy", locale="id_ID", state="readonly", font=entry_font)
         self.mulai_tanggal.grid(row=0, column=3, padx=5, pady=10)
         self.mulai_jam = tk.Entry(tambah_frame, width=8, font=entry_font)
-        self.mulai_jam.insert(0, "08:00")
+        mulai_var = tk.StringVar(value="08:00")
+        self.mulai_jam.config(textvariable=mulai_var)
+        setup_format_jam(mulai_var)
         self.mulai_jam.grid(row=0, column=4, padx=5, pady=10)
 
         tk.Label(tambah_frame, text="Selesai (tgl & jam):", font=label_font, bg="#ffffff").grid(row=0, column=5, padx=12, pady=10, sticky="w")
         self.selesai_tanggal = DateEntry(tambah_frame, width=12, date_pattern="dd-mm-yyyy", locale="id_ID", state="readonly", font=entry_font)
         self.selesai_tanggal.grid(row=0, column=6, padx=5, pady=10)
         self.selesai_jam = tk.Entry(tambah_frame, width=8, font=entry_font)
-        self.selesai_jam.insert(0, "17:00")
+        selesai_var = tk.StringVar(value="17:00")
+        self.selesai_jam.config(textvariable=selesai_var)
+        setup_format_jam(selesai_var)
         self.selesai_jam.grid(row=0, column=7, padx=5, pady=10)
 
         # Tombol "Tambah"
@@ -1033,4 +1068,3 @@ class SPKInputFrame(tk.Frame):
         if self.potong_label:
             self.potong_label.configure(image="")
             self.potong_temp_path = None
-
