@@ -162,7 +162,10 @@ def get_spk_details(spk_id):
         ORDER BY
             substr(t.mulai, 7, 4) || '-' || 
             substr(t.mulai, 4, 2) || '-' || 
-            substr(t.mulai, 1, 2) ASC
+            substr(t.mulai, 1, 2) || ' ' ||
+            substr(t.mulai, 12, 2) || ':' || 
+            substr(t.mulai, 15, 2) || ':' ||
+            substr(t.mulai, 18, 2) ASC
     """,
         (spk_id,),
     )

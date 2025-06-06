@@ -2,7 +2,7 @@ import sqlite3
 from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
-from db import get_spk_details, update_keterangan_tahapan
+from db import get_spk_details
 from PIL import Image, ImageTk
 import io
 import qrcode
@@ -192,7 +192,6 @@ class DetailSPKFrame(Frame):
 
         # ISI
         if tahapan_data:
-            print(tahapan_data)
             self.keterangan_vars = []
 
             for row, (
