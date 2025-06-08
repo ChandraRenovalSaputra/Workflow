@@ -812,6 +812,7 @@ class SPKInputFrame(tk.Frame):
             tambah_frame,
             values=self.tahapan_options,
             state="readonly",
+            height=13,
             width=25,
             font=("Arial", 14),
             style="Big.TCombobox"  # pakai style besar
@@ -874,7 +875,7 @@ class SPKInputFrame(tk.Frame):
         self.estimasi_rows = {}
 
         self.estimasi_table.tag_configure('oddrow', background="#ffffff")
-        self.estimasi_table.tag_configure('evenrow', background="#f0f0f0")
+        self.estimasi_table.tag_configure('evenrow', background="#ffffff")
 
         self.estimasi_table.bind("<Button-1>", self.hapus_row_tahapan)
 
