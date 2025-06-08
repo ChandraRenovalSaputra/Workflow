@@ -859,7 +859,7 @@ class SPKInputFrame(tk.Frame):
         style.configure("Treeview.Heading", font=("Arial", 16, "bold"))
         style.configure("Treeview", font=("Arial", 14), rowheight=40)
 
-        self.estimasi_table = ttk.Treeview(self.container, columns=("Tahap", "Mulai", "Selesai", "Aksi"), show="headings", height=8)
+        self.estimasi_table = ttk.Treeview(self.container, columns=("Tahap", "Mulai", "Selesai", "Aksi"), show="headings", height=14)
         self.estimasi_table.heading("Tahap", text="Tahapan", anchor="center")
         self.estimasi_table.heading("Mulai", text="Mulai", anchor="center", command=self.sort_estimasi_table)
         self.estimasi_table.heading("Selesai", text="Selesai", anchor="center")
