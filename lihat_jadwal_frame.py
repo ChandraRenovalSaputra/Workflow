@@ -1,7 +1,7 @@
 from datetime import datetime
 from tkinter import *
 from tkinter import Frame, Label, Button
-from db import get_jadwal_pekerjaan, get_workflow_conn, search_jadwal
+from db import get_jadwal_pekerjaan, get_workflow_conn, search_jadwal, get_spk_details
 from detail_spk import show_spk_detail
 from scrollable_frame import ScrollableFrame
 from backup_db import BackupManager
@@ -131,11 +131,31 @@ class LihatJadwalFrame(Frame):
             rows = [r for r in rows if r[3].lower() != "selesai"]
         elif filter_status == "selesai":
             rows = [r for r in rows if r[3].lower() == "selesai"]
+    
+        rows_with_estimasi = []
+        for row in rows:
+            spk_id = row[1]
+            detail = get_spk_details(spk_id)
+            spk_data, tahapan_data = detail
+
+            if tahapan_data and len(tahapan_data) > 0:
+                estimasi_mulai = tahapan_data[0][1] or "-"
+            else:
+                estimasi_mulai = "-"
+
+            # sisipkan estimasi_mulai di index 3, geser sisa ke kanan
+            new_row = row[:3] + (estimasi_mulai,) + row[3:]
+            rows_with_estimasi.append(new_row)
+
+        rows = rows_with_estimasi
+
 
         for widget in self.table_frame.winfo_children():
             widget.destroy()
 
         print(f"Data setelah filter status '{filter_status}': ", rows)
+
+        # Ambil estimasi_mulai dari get_spk_details dan gabungkan ke row
 
         # 🔁 Ambil hanya tahap terakhir per SPK
         filtered_rows = {}
@@ -150,13 +170,15 @@ class LihatJadwalFrame(Frame):
             "📝 Nama Pekerjaan",
             "🆔 ID",
             "📄 PO",
+            "📅 Estimasi Mulai",   # tambah ini
             "🚧 Tahap",
             "▶️ Mulai",
             "⏹️ Selesai",
             "⏰ Deadline",
             "🔍 Aksi",
         ]
-        column_widths = [23, 15, 15, 17, 15, 15, 15, 8]
+        column_widths = [23, 8, 14, 14, 17, 15, 15, 15, 8]
+
 
         # 🔶 Header
         for col, (text, width) in enumerate(zip(self.headers, column_widths)):
@@ -184,8 +206,8 @@ class LihatJadwalFrame(Frame):
 
         # 🔷 Baris data
         for i, row in enumerate(rows, start=1):
-            row_to_display = row[:3] + row[4:]
-            tag = self.get_row_tag(row[5], row[7], row[6])
+            row_to_display = row[:4] + row[5:]
+            tag = self.get_row_tag(row[6], row[8], row[7])
 
             if tag == "belum" or tag == "normal":
                 bg_color = "#f7f9fa"
@@ -200,13 +222,18 @@ class LihatJadwalFrame(Frame):
 
             for j, val in enumerate(row_to_display):
                 font_style = ("Segoe UI", 14, "bold") if j == 3 else ("Segoe UI", 14)
+                if j == 3:
+                    cell_bg = "#33a7d4"  # kuning terang, lebih mencolok
+                    font_style = ("Segoe UI", 14, "bold", "underline")
+                else:
+                    cell_bg = bg_color
                 Label(
                     self.table_frame,
                     text=val,
                     bd=1,
                     relief=RIDGE,
                     width=column_widths[j],
-                    bg=bg_color,
+                    bg=cell_bg,
                     anchor="w",
                     font=font_style,
                     height=2,

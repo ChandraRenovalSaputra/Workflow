@@ -84,7 +84,6 @@ class DetailSPKFrame(Frame):
                 ("INSHEET", spk_data[11]),
                 ("TOTAL CETAK", spk_data[12]),
                 ("WARNA", spk_data[13]),
-                ("VARNISH", spk_data[14]),
                 ("FINISHING", spk_data[15]),
             ]
 
