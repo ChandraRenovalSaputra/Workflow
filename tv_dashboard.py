@@ -51,4 +51,3 @@ class TVLihatJadwal(tk.Toplevel):
             print("Auto-scroll error:", e)
 
         self.after(10000, self.auto_scroll)
-
