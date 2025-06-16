@@ -27,38 +27,6 @@ from reportlab.lib import colors
 import locale
 import sys, os
 
-# Set locale ke Indonesia
-locale.setlocale(locale.LC_TIME, 'Indonesian')  # Untuk Windows
-
-
-def format_angka_with_dot(value):
-    raw = re.sub(r'[^\d]', '', value)
-    if raw == '':
-        return ''
-    return f"{int(raw):,}".replace(",", ".")
-
-def setup_ribuan_format(var):
-    def on_change(*args):
-        current = var.get()
-        new_value = format_angka_with_dot(current)
-        if current != new_value:
-            var.set(new_value)
-    var.trace_add('write', on_change)
-
-def format_dengan_titik(angka_str):
-        try:
-            angka = int(str(angka_str).replace('.', '').replace(',', '').strip())
-            return f"{angka:,}".replace(",", ".")
-        except:
-            return angka_str  # fallback
-
-def safe_int(value):
-    try:
-        return int(str(value).replace(".", "").strip())
-    except:
-        return 0
-
-
 def format_time(value):
     cleaned = "".join(filter(str.isdigit, value))
 
@@ -79,7 +47,6 @@ def format_time(value):
     else:  # 4 digit
         # Contoh: "0900" -> "09:00", "0945" -> "09:45"
         return f"{cleaned[:2]}:{cleaned[2:4]}"
-
 
 def setup_format_jam(var):
     def on_change(*args):
@@ -265,13 +232,13 @@ class SPKInputFrame(tk.Frame):
         entry.pack(side="left", fill="x", expand=True)
 
         # ✅ Tambahkan auto-format jika field cocok
-        if label_text in ["QTY", "QTY BAHAN", "JUMLAH CETAK (DRUK)", "INSHEET", "TOTAL CETAK"]:
-            var = tk.StringVar()
-            entry.config(textvariable=var)
-            setup_ribuan_format(var)
-        else:
-            var = tk.StringVar()
-            entry.config(textvariable=var)
+        # if label_text in ["QTY", "QTY BAHAN", "JUMLAH CETAK (DRUK)", "INSHEET", "TOTAL CETAK"]:
+        #     var = tk.StringVar()
+        #     entry.config(textvariable=var)
+        #     setup_ribuan_format(var)
+        # else:
+        #     var = tk.StringVar()
+        #     entry.config(textvariable=var)
 
         self.entries[label_text] = entry
 
@@ -291,7 +258,7 @@ class SPKInputFrame(tk.Frame):
                 self.estimasi_table.delete(row)
             self.estimasi_rows.clear()
         # Jika batal, tidak terjadi apa-apa
-    def resource_path(relative_path):
+    def resource_path(self, relative_path):
         """Mendapatkan path absolut yang kompatibel saat dibundel PyInstaller"""
         try:
             base_path = sys._MEIPASS
@@ -375,14 +342,14 @@ class SPKInputFrame(tk.Frame):
                 data["NO PO"],
                 data["COSTUMER"],
                 data["NAMA PRODUK"],
-                safe_int(data["QTY"]),
+                data["QTY"],
                 data["TANGGAL KIRIM"],
                 data["JENIS BAHAN"],
-                safe_int(data["QTY BAHAN"]),
+                data["QTY BAHAN"],
                 data["UKURAN CETAK"],
-                safe_int(data["JUMLAH CETAK (DRUK)"]),
-                safe_int(data["INSHEET"]),
-                safe_int(data["TOTAL CETAK"]),
+                data["JUMLAH CETAK (DRUK)"],
+                data["INSHEET"],
+                data["TOTAL CETAK"],
                 data["WARNA"],
                 data["FINISHING"],
                 gambar_desain_path,
@@ -529,8 +496,8 @@ class SPKInputFrame(tk.Frame):
                 ["No PO", data.get("no_po", "")],
                 ["Customer", data.get("costumer", "")],
                 ["Nama Produk", data.get("nama_artikel", "")],
-                ["Qty", format_dengan_titik(data.get("qty", ""))],            
-                ["Tanggal Kirim", data.get("tanggal_kirim", "")]                                       
+                ["Qty", data.get("qty", "")],
+                ["Tanggal Kirim", data.get("tanggal_kirim", "")]
             ]
 
 
@@ -552,15 +519,14 @@ class SPKInputFrame(tk.Frame):
             info_umum_table.drawOn(c, table_x, y - h)
             y -= h + 10
 
-            
             table_data = [
                 [Paragraph("Spesifikasi Produk", title_style), ""],
                 ["Jenis Bahan", data.get("jenis_bahan", "")],
-                ["Qty Bahan", format_dengan_titik(data.get("qty_bahan", ""))],
+                ["Qty Bahan", data.get("qty_bahan", "")],
                 ["Ukuran Cetak", data.get("ukuran_cetak", "")],
-                ["Jumlah Cetak", format_dengan_titik(data.get("jumlah_cetak", ""))],
-                ["Insheet", format_dengan_titik(data.get("insheet", ""))],
-                ["Total Cetak", format_dengan_titik(data.get("total_cetak", ""))],
+                ["Jumlah Cetak", data.get("jumlah_cetak", "")],
+                ["Insheet", data.get("insheet", "")],
+                ["Total Cetak", data.get("total_cetak", "")],
                 ["Warna", data.get("warna", "")],
                 ["Finishing", data.get("finishing", "")]
             ]
@@ -668,7 +634,7 @@ class SPKInputFrame(tk.Frame):
                 ["No PO", data.get("no_po", "")],
                 ["Customer", data.get("costumer", "")],
                 ["Nama Produk", data.get("nama_artikel", "")],
-                ["Qty", format_dengan_titik(data.get("qty", ""))],
+                ["Qty", data.get("qty", "")],
             ]
 
             info_table = Table(info_umum_data, colWidths=[5 * cm, 10 * cm])
