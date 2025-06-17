@@ -99,22 +99,10 @@ def run_scanner_listener():
 
 
 def tampilkan_jadwal_di_tv(root):
-    from lihat_jadwal_frame import LihatJadwalFrame
-    tv_window = tk.Toplevel(root)
-    tv_window.title("Layar Jadwal - TV")
-
-    screen_width = tv_window.winfo_screenwidth()
-    screen_height = tv_window.winfo_screenheight()
-    tv_window.geometry(f"{screen_width}x{screen_height}+{screen_width}+0")
-    tv_window.attributes("-fullscreen", True)
-    tv_window.configure(bg="white")
-
-    frame_tv = LihatJadwalFrame(tv_window, root)
-    frame_tv.pack(fill="both", expand=True)
-    frame_tv.auto_refresh()
+    from tv_dashboard import TVLihatJadwal
+    tv_window = TVLihatJadwal(root)
     root.tv_window = tv_window
-    tv_window.jadwal_frame = frame_tv
-
+    tv_window.focus_set()
 
 if __name__ == "__main__":
     scanner_thread = threading.Thread(target=run_scanner_listener, daemon=True)
