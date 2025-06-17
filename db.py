@@ -348,11 +348,10 @@ def get_active_tahapan(spk_id):
 
 
 def search_jadwal(keyword):
-    if not keyword:  # kalau None atau string kosong, fallback ke get_jadwal_pekerjaan
-        return get_jadwal_pekerjaan()
-
+    """Mencari di semua kolom yang relevan"""
     conn = get_workflow_conn()
     cursor = conn.cursor()
+    
     query = """
     WITH latest_tracking AS (
         SELECT 
@@ -372,32 +371,53 @@ def search_jadwal(keyword):
             t.selesai as target_selesai,
             ROW_NUMBER() OVER (PARTITION BY t.spk_id ORDER BY 
                 CASE 
-                    WHEN lt.last_scan_selesai IS NULL AND lt.last_scan_mulai IS NOT NULL THEN 0
+                    WHEN lt.last_scan_mulai IS NOT NULL AND lt.last_scan_selesai IS NULL THEN 0
                     WHEN lt.last_scan_mulai IS NULL THEN 1
                     ELSE 2
-                END) as stage_priority
+                END,
+                lt.last_scan_mulai DESC NULLS LAST
+            ) as stage_priority
         FROM spk_tahapan t
         LEFT JOIN latest_tracking lt ON t.spk_id = lt.spk_id AND t.nama_tahapan = lt.tahapan
+    ),
+    spk_status AS (
+        SELECT 
+            s.id as spk_id,
+            CASE 
+                WHEN COUNT(CASE WHEN lt.last_scan_selesai IS NULL THEN 1 END) > 0 
+                THEN 'berjalan' 
+                ELSE 'selesai' 
+            END as status
+        FROM spk s
+        LEFT JOIN spk_tahapan t ON s.id = t.spk_id
+        LEFT JOIN latest_tracking lt ON t.spk_id = lt.spk_id AND t.nama_tahapan = lt.tahapan
+        GROUP BY s.id
     )
     SELECT
         s.nama_artikel,
         s.id as spk_id,
         s.no_po,
+        ss.status,
         cs.nama_tahapan,
         cs.mulai,
         cs.selesai,
         cs.target_selesai as target
     FROM spk s
     JOIN current_stages cs ON s.id = cs.spk_id AND cs.stage_priority = 1
-    WHERE cs.selesai IS NULL
-    AND s.nama_artikel LIKE ?
-    ORDER BY cs.target_selesai ASC
+    JOIN spk_status ss ON s.id = ss.spk_id
+    WHERE 
+        s.nama_artikel LIKE ? OR
+        s.id LIKE ? OR
+        s.no_po LIKE ? OR
+        cs.nama_tahapan LIKE ?
+    ORDER BY cs.spk_id DESC
     """
-    cursor.execute(query, ("%" + keyword + "%",))
+    
+    search_pattern = f"%{keyword}%"
+    cursor.execute(query, (search_pattern, search_pattern, search_pattern, search_pattern))
     rows = cursor.fetchall()
     conn.close()
     return rows
-
 
 def tambah_colom_db():
     conn = get_workflow_conn()

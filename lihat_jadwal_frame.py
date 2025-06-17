@@ -8,7 +8,7 @@ from backup_db import BackupManager
 
 
 class LihatJadwalFrame(Frame):
-    def __init__(self, parent, controller, readonly=False):  # default False
+    def __init__(self, parent, controller, readonly=False):
         super().__init__(parent)
         self.controller = controller
         self.backup_manager = BackupManager(
@@ -17,6 +17,7 @@ class LihatJadwalFrame(Frame):
         self.readonly = readonly
         self.configure(bg="#ecf0f1")
 
+        # Judul Frame (tetap di atas)
         Label(
             self,
             text="📋 JADWAL PEKERJAAN",
@@ -25,108 +26,129 @@ class LihatJadwalFrame(Frame):
             fg="#2c3e50",
         ).pack(pady=30)
 
-        # 🔍 Search Bar
-        search_frame = Frame(self, bg="#ecf0f1")
-        search_frame.pack(pady=10)
+        # 🔍 Search Bar Frame (atas)
+        if not self.readonly:
+            self.search_frame = Frame(self, bg="#ecf0f1")
+            self.search_frame.pack(pady=10)
+            
+            # Frame container untuk tombol-tombol (agar bisa di-center)
+            self.button_container = Frame(self.search_frame, bg="#ecf0f1")
+            self.button_container.pack(expand=True)  # Ini yang membuatnya di tengah
 
-        self.search_var = StringVar()
-        Entry(
-            search_frame,
-            textvariable=self.search_var,
-            width=45,
-            font=("Segoe UI", 13),
-            bd=2,
-            relief=GROOVE,
-        ).pack(side=LEFT, padx=10, ipady=4)
-        Button(
-            search_frame,
-            text="🔍 Cari",
-            font=("Segoe UI", 12, "bold"),
-            bg="#27ae60",
-            fg="white",
-            activebackground="#2ecc71",
-            command=self.search,
-            padx=15,
-        ).pack(side=LEFT)
+            self.search_var = StringVar()
+            Entry(
+                self.button_container,
+                textvariable=self.search_var,
+                width=45,
+                font=("Segoe UI", 13),
+                bd=2,
+                relief=GROOVE,
+            ).pack(side=LEFT, padx=5, ipady=4)
 
-        # 🧾 Scrollable Tabel
+            Button(
+                self.button_container,
+                text="🔍 Cari",
+                font=("Segoe UI", 12, "bold"),
+                bg="#27ae60",
+                fg="white",
+                activebackground="#2ecc71",
+                command=self.search,
+                padx=15,
+            ).pack(side=LEFT, padx=5)
+
+            Button(
+                self.button_container,
+                text="📥 Backup",
+                font=("Segoe UI", 12, "bold"),
+                bg="#2980b9",
+                fg="white",
+                activebackground="#3498db",
+                command=self.backup_manager.manual_backup,
+                padx=15,
+            ).pack(side=LEFT, padx=5)
+
+            Button(
+                self.button_container,
+                text="📷 Scan",
+                font=("Segoe UI", 12, "bold"),
+                bg="#2980b9",
+                fg="white",
+                activebackground="#3498db",
+                command=self.open_scanner,
+                padx=15,
+            ).pack(side=LEFT, padx=5)
+
+        # Scrollable Frame untuk Tabel (tengah)
         self.scrollable = ScrollableFrame(self)
-        self.scrollable.pack(padx=30, pady=10, fill=BOTH, expand=True)
+        self.scrollable.pack(padx=30, pady=10, fill="both", expand=True)
         self.table_frame = self.scrollable.scrollable_frame
 
+        # Filter Frame (bawah)
+        if not self.readonly:
+            self.filter_frame = Frame(self, bg="#ecf0f1")
+            self.filter_frame.pack(pady=10)
 
-        self.filter_var = StringVar()
-        self.filter_var.set("semua")  # Defaultnya semua
+            self.filter_var = StringVar()
+            self.filter_var.set("semua")
+            OptionMenu(
+                self.filter_frame, 
+                self.filter_var, 
+                "semua", 
+                "berjalan", 
+                "selesai"
+            ).pack(side=LEFT, padx=10)
 
-        filter_frame = Frame(self, bg="#ecf0f1")
-        filter_frame.pack()
+            Button(
+                self.filter_frame,
+                text="📂 Terapkan Filter",
+                command=self.filter_data,
+                font=("Segoe UI", 12),
+                bg="#7f8c8d",
+                fg="white",
+            ).pack(side=LEFT)
 
-        OptionMenu(filter_frame, self.filter_var, "semua", "berjalan", "selesai").pack(
-            side=LEFT, padx=10
-        )
-
-        Button(
-            filter_frame,
-            text="📂 Terapkan Filter",
-            command=self.filter_data,
-            font=("Segoe UI", 12),
-            bg="#7f8c8d",
-            fg="white",
-        ).pack(side=LEFT)
+            # Tombol Kembali (bawah)
+            Button(
+                self,
+                text="⬅️ Kembali ke Dashboard",
+                command=self.kembali_ke_dashboard,
+                bg="#ffffff",
+                fg="#2c3e50",
+                font=("Segoe UI", 12, "bold"),
+                activebackground="#bdc3c7",
+                padx=20,
+                pady=8,
+                relief=GROOVE,
+                bd=1,
+            ).pack(pady=20, anchor=SE, padx=30)
 
         self.load_table()
 
-        # 🔙 Tombol Kembali
-        Button(
-            self,
-            text="⬅️ Kembali ke Dashboard",
-            command=self.kembali_ke_dashboard,
-            bg="#ffffff",
-            fg="#2c3e50",
-            font=("Segoe UI", 12, "bold"),
-            activebackground="#bdc3c7",
-            padx=20,
-            pady=8,
-            relief=GROOVE,
-            bd=1,
-        ).pack(pady=20, anchor=SE, padx=30)
-
-        Button(
-            search_frame,
-            text="📥 Backup",
-            font=("Segoe UI", 12, "bold"),
-            bg="#2980b9",
-            fg="white",
-            activebackground="#3498db",
-            command=self.backup_manager.manual_backup,
-            padx=15,
-        ).pack(side=LEFT, padx=10)
-
-        Button(
-            search_frame,
-            text="📷 Scan",
-            font=("Segoe UI", 12, "bold"),
-            bg="#2980b9",
-            fg="white",
-            activebackground="#3498db",
-            command=self.open_scanner,
-            padx=15,
-        ).pack(side=LEFT, padx=10)
-        self.auto_refresh()
-
     def load_table(self, keyword=None, filter_status="semua"):
-        if keyword is not None and keyword != "":
+        print(f"[DEBUG] Mode readonly: {self.readonly}")
+    
+        # Dapatkan data dari database
+        if keyword and keyword.strip():
             rows = search_jadwal(keyword)
         else:
             rows = get_jadwal_pekerjaan()
-            print(f"rows: {rows}")
-
-        print("Data yang diambil: ", rows)
-
-        for row in rows:
-            print(f"ID: {row[1]}, Status: {row[3]}")
-
-        # 🔍 Filter berdasarkan status
+        
+        print(f"Data dari DB: {rows}")  # Debugging
+        
+        if not rows:
+            # Tampilkan pesan tidak ada data
+            for widget in self.table_frame.winfo_children():
+                widget.destroy()
+            Label(
+                self.table_frame,
+                text="🔎 Tidak ada data ditemukan.",
+                font=("Segoe UI", 12),
+                bg="white",
+                fg="gray",
+            ).grid(row=0, column=0, columnspan=len(self.headers), pady=40)
+            return
+        
+        # Filter berdasarkan status
         if filter_status == "berjalan":
             rows = [r for r in rows if r[3].lower() != "selesai"]
         elif filter_status == "selesai":
@@ -155,8 +177,6 @@ class LihatJadwalFrame(Frame):
 
         print(f"Data setelah filter status '{filter_status}': ", rows)
 
-        # Ambil estimasi_mulai dari get_spk_details dan gabungkan ke row
-
         # 🔁 Ambil hanya tahap terakhir per SPK
         filtered_rows = {}
         for row in rows:
@@ -166,18 +186,31 @@ class LihatJadwalFrame(Frame):
 
         rows = list(filtered_rows.values())
 
-        self.headers = [
-            "📝 Nama Pekerjaan",
-            "🆔 ID",
-            "📄 PO",
-            "📅 Estimasi Mulai",   # tambah ini
-            "🚧 Tahap",
-            "▶️ Mulai",
-            "⏹️ Selesai",
-            "⏰ Deadline",
-            "🔍 Aksi",
-        ]
-        column_widths = [23, 8, 14, 14, 17, 15, 15, 15, 8]
+        if self.readonly:
+            self.headers = [
+                "📝 Nama Pekerjaan",
+                "🆔 ID",
+                "📄 PO",
+                "📅 Estimasi Mulai",
+                "🚧 Tahap",
+                "▶️ Mulai",
+                "⏹️ Selesai",
+                "⏰ Deadline",
+            ]
+            column_widths = [22, 7, 7, 15, 15, 15, 15, 15]
+        else:
+            self.headers = [
+                "📝 Nama Pekerjaan",
+                "🆔 ID",
+                "📄 PO",
+                "📅 Estimasi Mulai",
+                "🚧 Tahap",
+                "▶️ Mulai",
+                "⏹️ Selesai",
+                "⏰ Deadline",
+                "🔍 Aksi",
+            ]
+            column_widths = [22, 7, 7, 15, 15, 15, 15, 15, 8]
 
 
         # 🔶 Header
@@ -239,18 +272,8 @@ class LihatJadwalFrame(Frame):
                     height=2,
                 ).grid(row=i, column=j, sticky="nsew")
 
-            # 🔍 Aksi - tombol atau label tergantung readonly
-            if hasattr(self, "readonly") and self.readonly:
-                Label(
-                    self.table_frame,
-                    text="-",
-                    font=("Segoe UI", 14),
-                    width=column_widths[-1],
-                    bg=bg_color,
-                    relief=RIDGE,
-                    height=2,
-                ).grid(row=i, column=len(self.headers) - 1, sticky="nsew")
-            else:
+            # 🔍 Aksi - hanya jika bukan readonly
+            if not self.readonly:
                 Button(
                     self.table_frame,
                     text="ℹ️ Detail",
@@ -273,38 +296,34 @@ class LihatJadwalFrame(Frame):
 
     def get_row_tag(self, mulai, target, selesai):
         """Tentukan tag warna berdasarkan status deadline"""
-        print(f"[DEBUG] Mulai: {mulai}, Target: {target}")  # log
-
+        if not target or target == "-":
+            return "normal"
+        
         try:
-
-            # Coba parsing waktu deadline
             target_dt = datetime.strptime(target.strip(), "%d-%m-%Y %H:%M")
-            if selesai:
+            now = datetime.now()
+            
+            if selesai and selesai != "-":
                 selesai_dt = datetime.strptime(selesai.strip(), "%d-%m-%Y %H:%M:%S")
-
                 if selesai_dt < target_dt:
                     return "selesai"
-            # print(f"selesai_dt: {selesai_dt}")
-            now = datetime.now()
-
-            print(f"[DEBUG] Now: {now}, Deadline: {target_dt}")  # log waktu
-
+            
             if now > target_dt:
                 return "terlambat"
-            elif (target_dt - now).total_seconds() < 1 * 3600:
+            elif (target_dt - now).total_seconds() < 3600:  # 1 jam
                 return "warning"
             elif not mulai or mulai.strip() == "-":
                 return "belum"
             else:
                 return "normal"
-
         except Exception as e:
             print(f"[ERROR] Gagal parsing waktu: {e}")
-            # return "normal"
+            return "normal"
 
     def search(self):
-        keyword = self.search_var.get()
-        self.load_table(keyword)
+        keyword = self.search_var.get().strip()  # Bersihkan whitespace
+        print(f"[DEBUG] Mencari dengan keyword: '{keyword}'")
+        self.load_table(keyword if keyword else None)  # Kirim None jika keyword kosong
 
     def refresh_table(self):
         keyword = self.search_var.get()
@@ -327,13 +346,21 @@ class LihatJadwalFrame(Frame):
         self.controller.switch_frame(DashboardFrame)
 
     def filter_data(self):
+        print("Tombol Filter diklik!")  # Debugging
         keyword = self.search_var.get()
         filter_status = self.filter_var.get()
         self.load_table(keyword, filter_status)
 
     def auto_refresh(self):
-        keyword = self.search_var.get()
-        filter_status = self.filter_var.get()
-        self.load_table(keyword, filter_status)
-        self.after(10000, self.auto_refresh)
+        try:
+            # Handle kasus readonly
+            keyword = self.search_var.get() if hasattr(self, 'search_var') else None
+            filter_status = self.filter_var.get() if hasattr(self, 'filter_var') else "semua"
+            
+            self.load_table(keyword, filter_status)
+            self.after(10000, self.auto_refresh)
+        except Exception as e:
+            print(f"Error in auto_refresh: {e}")
+            # Coba lagi setelah 10 detik
+            self.after(10000, self.auto_refresh)
   

@@ -93,6 +93,7 @@ class DashboardFrame(tk.Frame):
 
     def tampilkan_tv(self):
         tv = TVLihatJadwal(self.controller)
+        self.controller.tv_window = tv
         tv.focus_set()
 
     def logout(self):
