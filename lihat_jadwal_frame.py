@@ -33,7 +33,7 @@ class LihatJadwalFrame(Frame):
             
             # Frame container untuk tombol-tombol (agar bisa di-center)
             self.button_container = Frame(self.search_frame, bg="#ecf0f1")
-            self.button_container.pack(expand=True)  # Ini yang membuatnya di tengah
+            self.button_container.pack(expand=True)
 
             self.search_var = StringVar()
             Entry(
@@ -83,31 +83,31 @@ class LihatJadwalFrame(Frame):
         self.scrollable.pack(padx=30, pady=10, fill="both", expand=True)
         self.table_frame = self.scrollable.scrollable_frame
 
-        # Filter Frame (bawah)
+        # Filter Frame (SELALU tampil, baik readonly maupun tidak)
+        self.filter_frame = Frame(self, bg="#ecf0f1")
+        self.filter_frame.pack(pady=10)
+
+        self.filter_var = StringVar()
+        self.filter_var.set("semua")
+        OptionMenu(
+            self.filter_frame, 
+            self.filter_var, 
+            "semua", 
+            "berjalan", 
+            "selesai"
+        ).pack(side=LEFT, padx=10)
+
+        Button(
+            self.filter_frame,
+            text="📂 Terapkan Filter",
+            command=self.filter_data,
+            font=("Segoe UI", 12),
+            bg="#7f8c8d",
+            fg="white",
+        ).pack(side=LEFT)
+
+        # Tombol Kembali (hanya saat bukan readonly)
         if not self.readonly:
-            self.filter_frame = Frame(self, bg="#ecf0f1")
-            self.filter_frame.pack(pady=10)
-
-            self.filter_var = StringVar()
-            self.filter_var.set("semua")
-            OptionMenu(
-                self.filter_frame, 
-                self.filter_var, 
-                "semua", 
-                "berjalan", 
-                "selesai"
-            ).pack(side=LEFT, padx=10)
-
-            Button(
-                self.filter_frame,
-                text="📂 Terapkan Filter",
-                command=self.filter_data,
-                font=("Segoe UI", 12),
-                bg="#7f8c8d",
-                fg="white",
-            ).pack(side=LEFT)
-
-            # Tombol Kembali (bawah)
             Button(
                 self,
                 text="⬅️ Kembali ke Dashboard",
@@ -124,19 +124,19 @@ class LihatJadwalFrame(Frame):
 
         self.load_table()
 
+
     def load_table(self, keyword=None, filter_status="semua"):
         print(f"[DEBUG] Mode readonly: {self.readonly}")
-    
+
         # Dapatkan data dari database
         if keyword and keyword.strip():
             rows = search_jadwal(keyword)
         else:
             rows = get_jadwal_pekerjaan()
-        
+
         print(f"Data dari DB: {rows}")  # Debugging
-        
+
         if not rows:
-            # Tampilkan pesan tidak ada data
             for widget in self.table_frame.winfo_children():
                 widget.destroy()
             Label(
@@ -147,25 +147,50 @@ class LihatJadwalFrame(Frame):
                 fg="gray",
             ).grid(row=0, column=0, columnspan=len(self.headers), pady=40)
             return
-        
+
         # Filter berdasarkan status
         if filter_status == "berjalan":
             rows = [r for r in rows if r[3].lower() != "selesai"]
         elif filter_status == "selesai":
             rows = [r for r in rows if r[3].lower() == "selesai"]
-    
+
         rows_with_estimasi = []
         for row in rows:
             spk_id = row[1]
             detail = get_spk_details(spk_id)
             spk_data, tahapan_data = detail
 
+            # Ambil estimasi_mulai dari tahapan "sedang", atau tahap berikutnya yang aktif
+            estimasi_mulai = "-"
             if tahapan_data and len(tahapan_data) > 0:
-                estimasi_mulai = tahapan_data[0][1] or "-"
-            else:
-                estimasi_mulai = "-"
+                # Urutkan berdasarkan estimasi_mulai
+                from datetime import datetime
 
-            # sisipkan estimasi_mulai di index 3, geser sisa ke kanan
+                def safe_datetime(val):
+                    try:
+                        return datetime.strptime(val, "%d-%m-%Y %H:%M")
+                    except:
+                        return datetime.max
+
+                # Urutkan berdasarkan estimasi mulai
+                tahapan_data_sorted = sorted(tahapan_data, key=lambda x: safe_datetime(x[1]))
+
+                # Tahapan sedang = tanggal_mulai terisi, tanggal_selesai kosong
+                tahapan_sedang = next((t for t in tahapan_data_sorted if t[4] and not t[5]), None)
+
+                # Kalau tidak ada, cari tahapan berikutnya yang belum dimulai
+                if not tahapan_sedang:
+                    tahapan_sedang = next((t for t in tahapan_data_sorted if not t[4] and not t[5]), None)
+
+                # Kalau semua sudah selesai, ambil tahap terakhir
+                if not tahapan_sedang:
+                    tahapan_sedang = tahapan_data_sorted[-1]
+
+                # Ambil estimasi_mulai
+                estimasi_mulai = tahapan_sedang[1] or "-"
+
+
+            # Sisipkan estimasi_mulai di index 3, geser sisa ke kanan
             new_row = row[:3] + (estimasi_mulai,) + row[3:]
             rows_with_estimasi.append(new_row)
 
@@ -177,7 +202,7 @@ class LihatJadwalFrame(Frame):
 
         print(f"Data setelah filter status '{filter_status}': ", rows)
 
-        # 🔁 Ambil hanya tahap terakhir per SPK
+        # Ambil hanya tahap terakhir per SPK
         filtered_rows = {}
         for row in rows:
             spk_id = row[1]
@@ -210,10 +235,9 @@ class LihatJadwalFrame(Frame):
                 "⏰ Deadline",
                 "🔍 Aksi",
             ]
-            column_widths = [22, 7, 7, 15, 15, 15, 15, 15, 8]
+            column_widths = [22, 7, 9, 13, 15, 15, 15, 15, 8]
 
-
-        # 🔶 Header
+        # Header
         for col, (text, width) in enumerate(zip(self.headers, column_widths)):
             Label(
                 self.table_frame,
@@ -237,9 +261,9 @@ class LihatJadwalFrame(Frame):
             ).grid(row=1, column=0, columnspan=len(self.headers), pady=40)
             return
 
-        # 🔷 Baris data
+        # Baris data
         for i, row in enumerate(rows, start=1):
-            row_to_display = row[:4] + row[5:]
+            row_to_display = row[:4] + row[5:]  # Buang index ke-4 (status SPK), karena estimasi_mulai sudah ditambah sebelumnya
             tag = self.get_row_tag(row[6], row[8], row[7])
 
             if tag == "belum" or tag == "normal":
@@ -256,7 +280,7 @@ class LihatJadwalFrame(Frame):
             for j, val in enumerate(row_to_display):
                 font_style = ("Segoe UI", 14, "bold") if j == 3 else ("Segoe UI", 14)
                 if j == 3:
-                    cell_bg = "#33a7d4"  # kuning terang, lebih mencolok
+                    cell_bg = "#39E08F"
                     font_style = ("Segoe UI", 14, "bold", "underline")
                 else:
                     cell_bg = bg_color
@@ -272,7 +296,7 @@ class LihatJadwalFrame(Frame):
                     height=2,
                 ).grid(row=i, column=j, sticky="nsew")
 
-            # 🔍 Aksi - hanya jika bukan readonly
+            # Aksi detail (jika bukan readonly)
             if not self.readonly:
                 Button(
                     self.table_frame,
@@ -288,6 +312,7 @@ class LihatJadwalFrame(Frame):
         # Responsif
         for col in range(len(self.headers)):
             self.table_frame.grid_columnconfigure(col, weight=1)
+
 
 
     def lihat_detail(self, spk_id):
