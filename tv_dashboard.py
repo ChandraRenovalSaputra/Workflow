@@ -64,22 +64,27 @@ class TVLihatJadwal(tk.Toplevel):
             self.after(10000, self.safe_auto_refresh)
 
     def auto_scroll(self):
-        """Scroll otomatis dengan penanganan error"""
         try:
-            if hasattr(self.jadwal_frame, 'scrollable'):
-                canvas = self.jadwal_frame.scrollable.canvas
-                canvas.yview_scroll(self.scroll_direction, "units")
-                
-                # Balik arah scroll jika mencapai batas
-                pos = canvas.yview()
-                if pos[1] >= 1.0:
+            canvas = self.jadwal_frame.scrollable.canvas
+            table_frame = self.jadwal_frame.table_frame
+
+            # Hitung jumlah baris data
+            total_widgets = len(table_frame.winfo_children())
+            column_count = len(self.jadwal_frame.headers)
+            row_count = total_widgets // column_count - 1 
+
+            if row_count > 7:
+                canvas.yview_scroll(7 * self.scroll_direction, "units")
+                top, bottom = canvas.yview()
+                if bottom >= 1.0:
                     self.scroll_direction = -1
-                elif pos[0] <= 0.0:
+                elif top <= 0.0:
                     self.scroll_direction = 1
+
         except Exception as e:
-            print(f"Error auto-scroll: {e}")
-        finally:
-            self.after(5000, self.auto_scroll)
+            print("Auto-scroll error:", e)
+
+        self.after(10000, self.auto_scroll)
 
     def configure_font_sizes(self):
         """Menyesuaikan ukuran font untuk TV"""
