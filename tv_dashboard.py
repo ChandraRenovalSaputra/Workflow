@@ -55,13 +55,16 @@ class TVLihatJadwal(tk.Toplevel):
         self.after(2000, self.auto_scroll)
 
     def safe_auto_refresh(self):
-        """Refresh data dengan penanganan error"""
+        """Refresh data dengan penanganan error dan mempertahankan filter"""
         try:
-            self.jadwal_frame.load_table()
+            keyword = self.jadwal_frame.search_var.get() if hasattr(self.jadwal_frame, 'search_var') else None
+            filter_status = self.jadwal_frame.filter_var.get() if hasattr(self.jadwal_frame, 'filter_var') else "semua"
+            self.jadwal_frame.load_table(keyword, filter_status)
         except Exception as e:
             print(f"Error saat auto-refresh: {e}")
         finally:
             self.after(10000, self.safe_auto_refresh)
+
 
     def auto_scroll(self):
         try:
@@ -73,7 +76,7 @@ class TVLihatJadwal(tk.Toplevel):
             column_count = len(self.jadwal_frame.headers)
             row_count = total_widgets // column_count - 1 
 
-            if row_count > 7:
+            if row_count > 10:
                 canvas.yview_scroll(7 * self.scroll_direction, "units")
                 top, bottom = canvas.yview()
                 if bottom >= 1.0:
