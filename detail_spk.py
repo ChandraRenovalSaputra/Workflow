@@ -64,7 +64,7 @@ class DetailSPKFrame(Frame):
 
             Label(
                 detail_card,
-                text="🗝️ INFORMASI SPK",
+                text="                   INFORMASI SPK",
                 font=("Segoe UI", 18, "bold"),
                 bg="white",
                 fg="#222",
