@@ -22,3 +22,5 @@ six==1.17.0
 tkcalendar==1.6.1
 apscheduler
 pyserial
+pandas
+openpyxl
